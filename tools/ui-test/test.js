@@ -162,8 +162,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(8000);
     await shot('16-episode-list');
     await clickText('Season 1');
+    await sleep(80);
+    await shot('17a-season-dropdown-opening');
     await sleep(600);
     await shot('17-season-dropdown');
+    console.log('sheet:', await page.evaluate(() => {
+      const m = document.querySelector('[data-side]');
+      const l = document.querySelector('[data-popup-side]');
+      if (!m || !l) return 'not found';
+      const ms = getComputedStyle(m), ls = getComputedStyle(l);
+      return JSON.stringify({ side: m.dataset.side, anim: ms.animationName, dur: ms.animationDuration, menuRadius: ms.borderRadius,
+        labelRadius: ls.borderRadius, labelBg: ls.backgroundColor, menuBg: ms.backgroundColor, gap: m.getBoundingClientRect().top - l.getBoundingClientRect().bottom });
+    }));
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
