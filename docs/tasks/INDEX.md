@@ -12,3 +12,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [008 · Stock Spotlight](008-stock-spotlight.md): merged upstream, reverted Spotlight board to Stremio's own; explained separate login
 - [009 · No card titles](009-no-card-titles.md): title row hidden on all cards incl. Continue Watching; ⋮ menu moved onto the poster
 - [010 · Login agent](010-login-agent.md): LaunchAgent keeps server up and reopens stock Stremio with the mods
+- [011 · Episode scores](011-episode-scores.md): episode IMDb rating (IMDb datasets) + RT Tomatometer when RT has one, in the episode hero

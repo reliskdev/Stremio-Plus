@@ -6,6 +6,8 @@ const { resolveAll, findByImdb, guessRtUrl } = require('./lib/match');
 const { renderPoster } = require('./lib/poster');
 const { getDetails } = require('./lib/details');
 const { enrichAll, getCinemeta } = require('./lib/enrich');
+const { rtEpisode } = require('./lib/episodes');
+const { imdbEpisodeRating, warmImdbEpisodes } = require('./lib/imdb-episodes');
 const pkg = require('./package.json');
 
 const PORT = process.env.PORT || 7010;
@@ -211,40 +213,59 @@ app.get('/poster/:imdb.jpg', async (req, res) => {
 
 // ---------- RT detail API (used by the modded Stremio UI) ----------
 // GET /api/rt/tt123?type=movie&name=Dune&year=2021
+// Resolve an IMDb id to its RT page details (known match, or URL-slug guess with a title sanity check).
+async function resolveRt(imdb, query) {
+  const hit = findByImdb(imdb);
+  let mediaUrl = hit?.mediaUrl;
+  const type = hit?.type || (query.type === 'series' ? 'series' : 'movie');
+  let guessedName = null;
+  if (!mediaUrl) {
+    let { name, year } = query;
+    if (!name || !year) {
+      const cm = await getCinemeta(type, imdb);
+      name = name || cm?.name;
+      year = year || String(cm?.year || '').slice(0, 4);
+    }
+    if (name) {
+      guessedName = String(name);
+      mediaUrl = await guessRtUrl(type, guessedName, String(year || '').slice(0, 4));
+    }
+  }
+  if (!mediaUrl) return null;
+  const d = await getDetails(`https://www.rottentomatoes.com${mediaUrl}`);
+  if (!hit && guessedName) {
+    const n = (s) => String(s).toLowerCase().replace(/\(\d{4}\)/, '').replace(/[^a-z0-9]/g, '');
+    if (!n(d.title).includes(n(guessedName)) && !n(guessedName).includes(n(d.title))) return null;
+  }
+  return { type, mediaUrl, details: d };
+}
+
 app.get('/api/rt/:imdb', async (req, res) => {
   const { imdb } = req.params;
   if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
   try {
-    let hit = findByImdb(imdb);
-    let mediaUrl = hit?.mediaUrl;
-    let type = hit?.type || (req.query.type === 'series' ? 'series' : 'movie');
-    let guessedName = null;
-    if (!mediaUrl) {
-      let { name, year } = req.query;
-      if (!name || !year) {
-        const cm = await getCinemeta(type, imdb);
-        name = name || cm?.name;
-        year = year || String(cm?.year || '').slice(0, 4);
-      }
-      if (name) {
-        guessedName = String(name);
-        mediaUrl = await guessRtUrl(type, guessedName, String(year || '').slice(0, 4));
-      }
-    }
-    if (!mediaUrl) return res.status(404).json({ error: 'not on rotten tomatoes' });
-    const d = await getDetails(`https://www.rottentomatoes.com${mediaUrl}`);
-    // Sanity check for guessed slugs: titles must roughly agree.
-    if (!hit && guessedName) {
-      const n = (s) => String(s).toLowerCase().replace(/\(\d{4}\)/, '').replace(/[^a-z0-9]/g, '');
-      if (!n(d.title).includes(n(guessedName)) && !n(guessedName).includes(n(d.title))) {
-        return res.status(404).json({ error: 'no confident match' });
-      }
-    }
+    const r = await resolveRt(imdb, req.query);
+    if (!r) return res.status(404).json({ error: 'not on rotten tomatoes' });
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.json({ imdb, type, ...d });
+    res.json({ imdb, type: r.type, ...r.details });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
+});
+
+// GET /api/rt/tt123/episode/1/3?name=Dexter&year=2006 → { imdbRating, rt: { score, reviews, average, url } | null }
+app.get('/api/rt/:imdb/episode/:season/:episode', async (req, res) => {
+  const { imdb } = req.params;
+  const season = parseInt(req.params.season, 10), episode = parseInt(req.params.episode, 10);
+  if (!/^tt\d+$/.test(imdb) || !(season >= 0) || !(episode >= 0)) return res.status(400).json({ error: 'bad id' });
+  const [imdbRating, rt] = await Promise.all([
+    imdbEpisodeRating(imdb, season, episode).catch(() => null),
+    resolveRt(imdb, { ...req.query, type: 'series' })
+      .then((r) => (r && r.mediaUrl.startsWith('/tv/') ? rtEpisode(r.mediaUrl, season, episode) : null))
+      .catch(() => null),
+  ]);
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.json({ imdb, season, episode, imdbRating, rt });
 });
 
 // ---------- Configure UI ----------
@@ -277,6 +298,7 @@ ui.use((req, res) => res.sendFile(path.join(UI_BUILD, 'index.html')));
 ui.listen(UI_PORT, '127.0.0.1', () => console.log(`   Stremio UI: http://127.0.0.1:${UI_PORT}/`));
 
 app.listen(PORT, () => {
+  warmImdbEpisodes();
   console.log(`🍅 Rotten Tomatoes Picks running`);
   console.log(`   Configure:  http://127.0.0.1:${PORT}/configure`);
   console.log(`   Manifest:   http://127.0.0.1:${PORT}/manifest.json`);

@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -133,6 +133,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.goto(UI + '#/detail/movie/tt45368240/tt45368240', { waitUntil: 'networkidle2' });
     await sleep(8000);
     await shot('06-details');
+  }
+
+  if (step === 'all' || step === 'episode') {
+    // Episode hero: IMDb rating + RT Tomatometer (Severance S2E10), IMDb only (Dexter S1E3)
+    await page.goto(UI + '#/detail/series/tt11280740/' + encodeURIComponent('tt11280740:2:10'), { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    await shot('12-episode-rt');
+    await page.goto(UI + '#/detail/series/tt0773262/' + encodeURIComponent('tt0773262:1:3'), { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    await shot('13-episode-imdb');
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
