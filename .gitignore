@@ -1,0 +1,8 @@
+# web/ is its own git repo (stremio-web fork, branch rt-mod)
+/web/
+
+node_modules/
+addon/data/
+tools/ui-test/shots/
+tools/ui-test/.profile/
+.DS_Store

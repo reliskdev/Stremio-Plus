@@ -1,0 +1,66 @@
+#!/bin/bash
+# stremio-plus: Spicetify-style helper for the Stremio+ build.
+#   stremio-plus launch    start the server (if needed) and open Stremio with the modded UI
+#   stremio-plus build     rebuild the modded UI (web/) into web/build
+#   stremio-plus apply     build, restart the server, relaunch Stremio
+#   stremio-plus start     start the server (addon :7010 + UI :7011)
+#   stremio-plus stop      stop the server
+#   stremio-plus restart   restart the server
+#   stremio-plus test      screenshot the UI in headless Brave (tools/ui-test)
+#   stremio-plus vanilla   reopen Stremio with its normal UI
+#   stremio-plus logs      follow the server log
+set -euo pipefail
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ADDON="$ROOT/addon"
+WEB="$ROOT/web"
+LOG="$ADDON/data/server.log"
+UI_URL="http://127.0.0.1:7011/"
+STREMIO_BIN="/Applications/Stremio.app/Contents/MacOS/Stremio"
+
+running() { curl -s -o /dev/null --max-time 2 http://127.0.0.1:7010/manifest.json; }
+
+start() {
+  if running; then echo "server already running"; return; fi
+  mkdir -p "$ADDON/data"
+  (cd "$ADDON" && nohup node server.js >> "$LOG" 2>&1 &)
+  for _ in $(seq 1 30); do running && { echo "server started (addon :7010, UI :7011)"; return; }; sleep 0.2; done
+  echo "server failed to start; see $LOG" >&2; exit 1
+}
+
+stop() { pkill -f "node server.js" && echo "server stopped" || echo "server not running"; }
+
+build() {
+  (cd "$WEB" && SERVICE_WORKER_DISABLED=true npx webpack --mode production 2>&1 | grep -E "ERROR|Module not found|compiled")
+}
+
+quit_stremio() {
+  if pgrep -f "$STREMIO_BIN" >/dev/null; then
+    osascript -e 'quit app "Stremio"' || true
+    for _ in $(seq 1 40); do pgrep -f "$STREMIO_BIN" >/dev/null || break; sleep 0.25; done
+  fi
+}
+
+launch() {
+  start
+  if pgrep -f -- "--webui-url=$UI_URL" >/dev/null; then
+    open -a Stremio
+  else
+    quit_stremio
+    open -a Stremio --args "--webui-url=$UI_URL"
+  fi
+}
+
+case "${1:-launch}" in
+  launch) launch ;;
+  build) build ;;
+  apply) build; stop; start; quit_stremio; launch ;;
+  start) start ;;
+  stop) stop ;;
+  restart) stop; sleep 0.5; start ;;
+  test) start; (cd "$ROOT/tools/ui-test" && node test.js "${2:-all}") ;;
+  vanilla) quit_stremio; open -a Stremio ;;
+  logs) tail -f "$LOG" ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
+esac

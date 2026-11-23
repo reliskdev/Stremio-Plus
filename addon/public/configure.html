@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotten Tomatoes Picks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0b0d;
+    --panel: #151317;
+    --panel-2: #1c1a1f;
+    --line: rgba(255,255,255,.08);
+    --text: #f4f1ee;
+    --muted: #9b959f;
+    --tomato: #fa320a;
+    --tomato-soft: rgba(250,50,10,.14);
+    --gold: #ffd43b;
+    --green: #0ac855;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 Inter, system-ui, sans-serif;
+    background-image: radial-gradient(1200px 500px at 15% -10%, rgba(250,50,10,.18), transparent 60%),
+                      radial-gradient(900px 400px at 100% 0%, rgba(255,212,59,.07), transparent 60%);
+    background-attachment: fixed;
+    padding-bottom: 110px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 48px 0 28px; display: flex; gap: 22px; align-items: center; }
+  .logo { width: 64px; height: 64px; flex: none; filter: drop-shadow(0 8px 24px rgba(250,50,10,.45)); }
+  h1 { font-family: Fraunces, Georgia, serif; font-weight: 900; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 0; letter-spacing: -.02em; }
+  h1 em { font-style: normal; color: var(--tomato); }
+  .sub { color: var(--muted); margin: 6px 0 0; max-width: 620px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (min-width: 901px) { .grid > div:last-child { position: sticky; top: 20px; } }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-bottom: 18px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 14px; font-weight: 700; display:flex; align-items:center; gap:8px; }
+
+  .cat { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: .15s; }
+  .cat:hover { background: var(--panel-2); }
+  .cat.on { background: var(--tomato-soft); border-color: rgba(250,50,10,.35); }
+  .cat .t { font-weight: 600; }
+  .cat .b { color: var(--muted); font-size: 13px; }
+  .cat .tag { margin-left: auto; font-size: 11px; color: var(--muted); border: 1px solid var(--line); padding: 2px 8px; border-radius: 99px; flex: none; }
+  .cat .eye { flex:none; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 6px; }
+  .cat .eye:hover, .cat .eye.active { color: var(--gold); }
+
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch span { position: absolute; inset: 0; background: #34303a; border-radius: 99px; transition: .2s; }
+  .switch span::after { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+  .switch input:checked + span { background: var(--tomato); }
+  .switch input:checked + span::after { transform: translateX(16px); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); padding: 8px 14px; border-radius: 99px; cursor: pointer; font: inherit; font-weight: 500; transition: .15s; }
+  .chip:hover { border-color: rgba(255,255,255,.25); }
+  .chip.on { background: var(--text); color: #111; border-color: var(--text); }
+
+  .slider { margin: 6px 0 18px; }
+  .slider:last-child { margin-bottom: 0; }
+  .slider .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .slider label { font-weight: 600; }
+  .slider output { font-family: Fraunces, serif; font-size: 22px; font-weight: 700; }
+  input[type=range] { width: 100%; accent-color: var(--tomato); }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+
+  .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .preview-head h3 { margin: 0; font-size: 18px; }
+  .posters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .poster { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); aspect-ratio: 2/3; transition: transform .2s; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  .poster:hover { transform: translateY(-4px) scale(1.02); }
+  .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .poster .name { position: absolute; left: 0; right: 0; top: 0; padding: 10px; font-weight: 600; font-size: 13px; background: linear-gradient(rgba(0,0,0,.75), transparent); opacity: 0; transition: .2s; }
+  .poster:hover .name { opacity: 1; }
+  .skeleton { background: linear-gradient(100deg, var(--panel-2) 30%, #26232a 50%, var(--panel-2) 70%); background-size: 300% 100%; animation: sh 1.4s infinite; }
+  @keyframes sh { to { background-position: -150% 0; } }
+  .empty { color: var(--muted); padding: 40px; text-align: center; border: 1px dashed var(--line); border-radius: 14px; grid-column: 1/-1; }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(12,11,13,.86); backdrop-filter: blur(14px); border-top: 1px solid var(--line); z-index: 10; }
+  .bar .wrap { display: flex; align-items: center; gap: 12px; padding-top: 16px; padding-bottom: 16px; flex-wrap: wrap; }
+  .summary { color: var(--muted); font-size: 14px; margin-right: auto; }
+  .summary b { color: var(--text); }
+  .btn { border: 0; font: inherit; font-weight: 700; padding: 13px 22px; border-radius: 12px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: .15s; }
+  .btn.primary { background: var(--tomato); color: #fff; box-shadow: 0 8px 24px rgba(250,50,10,.35); }
+  .btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .btn.ghost:hover { border-color: rgba(255,255,255,.25); }
+  .toast { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #111; padding: 10px 18px; border-radius: 10px; font-weight: 600; opacity: 0; transition: .25s; pointer-events: none; z-index: 20; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (max-width: 600px) { .bar .btn { flex: 1; justify-content: center; } .summary { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="19" r="12" fill="#FA320A"/>
+      <ellipse cx="11.5" cy="14.5" rx="4" ry="2.2" fill="#ff7a5c" opacity=".7"/>
+      <path fill="#00912D" d="M16 8.5l2.8-4.5.6 4.5 4.5-1.7-3.4 3.9 4.5 1.1-5 1.1-1.1 3.4-2.2-3.4-4 1.7 1.7-3.9-4.5-1.7 5-.5z"/>
+    </svg>
+    <div>
+      <h1>Rotten Tomatoes <em>Picks</em></h1>
+      <p class="sub">The best-reviewed movies and shows, straight into Stremio, with the 🍅 Tomatometer and 🍿 Popcornmeter on every poster.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="card">
+        <h2>🎬 Movie rows</h2>
+        <div id="cats-movie"></div>
+      </section>
+      <section class="card">
+        <h2>📺 TV rows</h2>
+        <div id="cats-series"></div>
+      </section>
+      <section class="card">
+        <h2>📡 Best on your services</h2>
+        <div class="chips" id="services"></div>
+        <p class="hint">Adds a “Best Movies on …” and “Best Shows on …” row for each one (Fresh only).</p>
+      </section>
+      <section class="card">
+        <h2>🎯 Quality bar</h2>
+        <div class="slider">
+          <div class="row"><label for="t">🍅 Minimum Tomatometer</label><output id="tv">Any</output></div>
+          <input type="range" id="t" min="0" max="95" step="5" value="0">
+        </div>
+        <div class="slider">
+          <div class="row"><label for="p">🍿 Minimum Popcornmeter</label><output id="pv">Any</output></div>
+          <input type="range" id="p" min="0" max="95" step="5" value="0">
+        </div>
+      </section>
+      <section class="card">
+        <div class="cat" id="badge-row" style="padding:0">
+          <label class="switch"><input type="checkbox" id="b" checked><span></span></label>
+          <div><div class="t">Score badges on posters</div><div class="b">Show both scores on the poster art</div></div>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <div class="preview-head">
+          <div>
+            <h2 style="margin-bottom:4px">Live preview</h2>
+            <h3 id="preview-title">…</h3>
+          </div>
+        </div>
+        <div class="posters" id="posters"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="summary" id="summary"></div>
+    <button class="btn ghost" id="copy">Copy link</button>
+    <a class="btn ghost" id="web" target="_blank" rel="noopener">Stremio Web</a>
+    <a class="btn primary" id="install">Install in Stremio</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT = { c: ['rt-movies-popular','rt-movies-certified','rt-movies-crowd','rt-tv-popular','rt-tv-certified'], s: [], t: 0, p: 0, b: true };
+const b64 = {
+  enc: (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+  dec: (s) => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))))),
+};
+
+let cfg = { ...DEFAULT };
+const seg = location.pathname.split('/').filter(Boolean);
+if (seg.length === 2 && seg[1] === 'configure') { try { cfg = { ...DEFAULT, ...b64.dec(seg[0]) }; } catch {} }
+
+let options, previewId = null;
+const IS_LOCAL = ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname) || /^(192\.168|10\.)/.test(location.hostname);
+const $ = (id) => document.getElementById(id);
+
+async function init() {
+  options = await fetch('/api/options').then(r => r.json());
+  previewId = cfg.c[0] || options.catalogs[0].id;
+  renderCats(); renderServices();
+  $('t').value = cfg.t; $('p').value = cfg.p; $('b').checked = cfg.b;
+  for (const k of ['t','p']) $(k).addEventListener('input', () => { cfg[k] = +$(k).value; syncSliders(); update(); schedulePreview(); });
+  $('b').addEventListener('change', () => { cfg.b = $('b').checked; update(); loadPreview(); });
+  syncSliders(); update(); loadPreview();
+}
+
+function renderCats() {
+  for (const type of ['movie','series']) {
+    const box = $('cats-' + type); box.innerHTML = '';
+    for (const c of options.catalogs.filter(c => c.type === type)) {
+      const el = document.createElement('div');
+      el.className = 'cat' + (cfg.c.includes(c.id) ? ' on' : '');
+      el.innerHTML = `
+        <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" ${cfg.c.includes(c.id) ? 'checked' : ''}><span></span></label>
+        <div style="min-width:0"><div class="t">${c.name.replace('RT · ','')}</div><div class="b">${c.blurb}</div></div>
+        <button class="eye ${previewId === c.id ? 'active' : ''}" title="Preview this row" style="margin-left:auto">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>`;
+      const toggle = () => {
+        cfg.c = cfg.c.includes(c.id) ? cfg.c.filter(x => x !== c.id) : [...cfg.c, c.id];
+        renderCats(); update();
+      };
+      el.querySelector('input').addEventListener('change', toggle);
+      el.addEventListener('click', (e) => { if (!e.target.closest('.eye')) toggle(); });
+      el.querySelector('.eye').addEventListener('click', (e) => { e.stopPropagation(); previewId = c.id; renderCats(); loadPreview(); });
+      box.appendChild(el);
+    }
+  }
+}
+
+function renderServices() {
+  const box = $('services'); box.innerHTML = '';
+  for (const [id, name] of Object.entries(options.services)) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (cfg.s.includes(id) ? ' on' : '');
+    b.textContent = name;
+    b.onclick = () => { cfg.s = cfg.s.includes(id) ? cfg.s.filter(x => x !== id) : [...cfg.s, id]; renderServices(); update(); };
+    box.appendChild(b);
+  }
+}
+
+function syncSliders() {
+  $('tv').textContent = cfg.t ? cfg.t + '%+' : 'Any';
+  $('pv').textContent = cfg.p ? cfg.p + '%+' : 'Any';
+}
+
+function manifestUrl() {
+  const enc = b64.enc(cfg);
+  return `${location.origin}/${enc}/manifest.json`;
+}
+
+function update() {
+  const url = manifestUrl();
+  // stremio:// is always opened as https:// by Stremio, which a local http server can't answer.
+  $('install').href = IS_LOCAL ? '#' : url.replace(/^https?:/, 'stremio:');
+  $('web').href = 'https://web.stremio.com/#/addons?addon=' + encodeURIComponent(url);
+  const rows = cfg.c.length + cfg.s.length * 2;
+  $('summary').innerHTML = rows
+    ? `<b>${rows}</b> row${rows > 1 ? 's' : ''} · 🍅 ${cfg.t ? cfg.t + '%+' : 'any'} · 🍿 ${cfg.p ? cfg.p + '%+' : 'any'}`
+    : '<b style="color:var(--tomato)">Pick at least one row</b>';
+  $('install').style.pointerEvents = rows ? '' : 'none';
+  $('install').style.opacity = rows ? '' : '.4';
+}
+
+let pt;
+function schedulePreview() { clearTimeout(pt); pt = setTimeout(loadPreview, 450); }
+
+let reqId = 0;
+async function loadPreview() {
+  const id = ++reqId;
+  const cat = options.catalogs.find(c => c.id === previewId);
+  $('preview-title').textContent = cat.name.replace('RT · ', '');
+  $('posters').innerHTML = Array.from({ length: 8 }, () => '<div class="poster skeleton"></div>').join('');
+  const items = await fetch(`/api/preview?catalog=${previewId}&t=${cfg.t}&p=${cfg.p}`).then(r => r.json()).catch(() => []);
+  if (id !== reqId) return;
+  $('posters').innerHTML = items.length ? '' : '<div class="empty">Nothing clears that bar. Try lowering the minimum scores.</div>';
+  for (const m of items) {
+    const a = document.createElement('a');
+    a.className = 'poster'; a.href = m.links[0].url; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = `<img loading="lazy" alt=""><div class="name"></div>`;
+    a.querySelector('img').src = cfg.b ? m.poster : `https://images.metahub.space/poster/medium/${m.id}/img`; a.querySelector('img').alt = m.name;
+    a.querySelector('.name').textContent = m.name;
+    $('posters').appendChild(a);
+  }
+}
+
+$('install').addEventListener('click', async (e) => {
+  if (!IS_LOCAL) return;
+  e.preventDefault();
+  try { await navigator.clipboard.writeText(manifestUrl()); } catch { prompt('Copy this link:', manifestUrl()); }
+  toast('Link copied: in Stremio, open Addons and paste it into the search box', 5000);
+});
+
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(manifestUrl()); toast('Manifest link copied'); }
+  catch { prompt('Copy this link:', manifestUrl()); }
+};
+function toast(msg, ms = 1800) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), ms); }
+
+init();
+</script>
+</body>
+</html>

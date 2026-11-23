@@ -1,0 +1,20 @@
+{
+  "name": "stremio-rt-addon",
+  "version": "1.0.0",
+  "description": "Stremio addon: Rotten Tomatoes picks with Tomatometer + Popcornmeter",
+  "main": "server.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.3.0",
+    "sharp": "^0.35.5"
+  }
+}

@@ -1,0 +1,283 @@
+const express = require('express');
+const path = require('path');
+const { GENRES, SERVICES, BASE_CATALOGS, encodeConfig, decodeConfig, catalogsFor } = require('./lib/config');
+const { buildPath, fetchPage } = require('./lib/rt');
+const { resolveAll, findByImdb, guessRtUrl } = require('./lib/match');
+const { renderPoster } = require('./lib/poster');
+const { getDetails } = require('./lib/details');
+const { enrichAll, getCinemeta } = require('./lib/enrich');
+const pkg = require('./package.json');
+
+const PORT = process.env.PORT || 7010;
+const PAGE_SIZE = 40;
+const MAX_RT_PAGES = 12;
+
+const app = express();
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  next();
+});
+
+const baseUrl = (req) => `${req.headers['x-forwarded-proto'] || req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}`;
+
+// ---------- Manifest ----------
+function manifest(cfg) {
+  const catalogs = catalogsFor(cfg).map((c) => ({
+    id: c.id,
+    type: c.type,
+    name: c.name,
+    extra: c.spotlight
+      ? [{ name: 'skip', isRequired: false }]
+      : [{ name: 'genre', options: Object.keys(GENRES), isRequired: false }, { name: 'skip', isRequired: false }],
+  }));
+  return {
+    id: 'community.rottentomatoes.picks',
+    version: pkg.version,
+    name: 'Rotten Tomatoes Picks',
+    description: 'The best-reviewed movies & shows from Rotten Tomatoes, with Tomatometer 🍅 and Popcornmeter 🍿 scores, critics consensus and trailers.',
+    logo: 'https://www.rottentomatoes.com/assets/pizza-pie/images/favicon.ico',
+    resources: ['catalog'],
+    types: ['movie', 'series'],
+    idPrefixes: ['tt'],
+    catalogs,
+    behaviorHints: { configurable: true, configurationRequired: false },
+  };
+}
+
+app.get(['/manifest.json', '/:config/manifest.json'], (req, res) => {
+  res.json(manifest(decodeConfig(req.params.config)));
+});
+
+// ---------- Lists ----------
+// Builds a filtered + IMDb-matched list lazily, page by page from RT.
+const listCache = new Map();
+const LIST_TTL = 3 * 60 * 60 * 1000;
+
+async function getList(rtPath, cfg, needed) {
+  const key = `${rtPath}|${cfg.t}|${cfg.p}`;
+  let entry = listCache.get(key);
+  if (!entry || Date.now() - entry.at > LIST_TTL) {
+    entry = { at: Date.now(), items: [], seen: new Set(), rtPage: 0, done: false, pending: null };
+    listCache.set(key, entry);
+  }
+  while (entry.items.length < needed && !entry.done) {
+    if (!entry.pending) {
+      entry.pending = (async () => {
+        const page = await fetchPage(rtPath, entry.rtPage);
+        entry.rtPage++;
+        if (!page.hasNext || entry.rtPage >= MAX_RT_PAGES) entry.done = true;
+        const kept = page.items.filter((it) =>
+          (cfg.t === 0 || (it.tomato ?? -1) >= cfg.t) &&
+          (cfg.p === 0 || (it.popcorn ?? -1) >= cfg.p));
+        const ids = await resolveAll(kept);
+        kept.forEach((it, i) => {
+          if (ids[i] && !entry.seen.has(ids[i].id)) {
+            entry.seen.add(ids[i].id);
+            entry.items.push({ ...it, imdb: ids[i].id, year: ids[i].year });
+          }
+        });
+      })().finally(() => { entry.pending = null; });
+    }
+    await entry.pending;
+  }
+  return entry.items;
+}
+
+// Spotlight: the cream of the crop: Certified Fresh + liked by audiences, movies and TV interleaved.
+async function getSpotlight(cfg) {
+  const strict = { ...cfg, t: Math.max(cfg.t, 80), p: Math.max(cfg.p, 70) };
+  const [movies, shows] = await Promise.all([
+    getList('movies_at_home/critics:certified_fresh~sort:popular', strict, 8),
+    getList('tv_series_browse/critics:fresh~sort:popular', { ...strict, t: Math.max(strict.t, 88) }, 6),
+  ]);
+  const out = [];
+  for (let i = 0; i < 8; i++) {
+    if (movies[i]) out.push(movies[i]);
+    if (shows[i] && i < 5) out.push(shows[i]);
+  }
+  return out.slice(0, 12);
+}
+
+// ---------- Meta building ----------
+const verdict = (s, cert, kind) => {
+  if (s == null) return kind === 't' ? 'No Tomatometer yet' : 'No Popcornmeter yet';
+  if (kind === 't') return cert ? 'Certified Fresh' : s >= 60 ? 'Fresh' : 'Rotten';
+  return cert ? 'Verified Hot' : s >= 60 ? 'Upright' : 'Spilled';
+};
+
+function toMeta(it, cfg, host, extra = {}) {
+  const { details: d, cm } = extra;
+  const q = new URLSearchParams({
+    t: it.tomato ?? 'x', tc: it.tomatoCertified ? 1 : 0,
+    a: it.popcorn ?? 'x', ac: it.popcornCertified ? 1 : 0,
+  });
+  if (it.rtPoster) q.set('fallback', it.rtPoster);
+  const scoreLine = `🍅 ${it.tomato ?? '--'}%  🍿 ${it.popcorn ?? '--'}%`;
+
+  const parts = [];
+  if (d?.criticsConsensus) parts.push(`“${d.criticsConsensus}”`);
+  parts.push(d?.synopsis || cm?.description || '');
+  parts.push(`🍅 ${it.tomato ?? '--'}% ${verdict(it.tomato, it.tomatoCertified, 't')}  ·  🍿 ${it.popcorn ?? '--'}% ${verdict(it.popcorn, it.popcornCertified, 'p')}`);
+  const description = parts.filter(Boolean).join('\n\n');
+
+  const genres = (d?.genres?.length ? d.genres : cm?.genres) || [];
+  const cast = (d?.cast?.filter((c) => !/director|creator|producer/i.test(c.role)).map((c) => c.name) || cm?.cast || []).slice(0, 4);
+  const directors = d?.director ? d.director.split(',').map((s) => s.trim()).slice(0, 2) : (cm?.director || []).slice(0, 2);
+  const link = (category) => (name) => ({ name, category, url: `stremio:///search?search=${encodeURIComponent(name)}` });
+
+  const trailerStreams = d?.trailer?.mp4
+    ? [{ title: `${it.title} – Trailer`, url: d.trailer.mp4 }]
+    : (cm?.trailerStreams || []);
+
+  return {
+    id: it.imdb,
+    type: it.type,
+    name: it.title,
+    poster: cfg.b ? `${host}/poster/${it.imdb}.jpg?${q}` : `https://images.metahub.space/poster/medium/${it.imdb}/img`,
+    posterShape: 'poster',
+    background: cm?.background || d?.photos?.[0]?.full || `https://images.metahub.space/background/medium/${it.imdb}/img`,
+    logo: cm?.logo || undefined,
+    releaseInfo: [it.year, scoreLine].filter(Boolean).join('  ·  '),
+    runtime: d?.runtime || cm?.runtime || undefined,
+    description,
+    genres,
+    links: [
+      { name: scoreLine, category: 'Rotten Tomatoes', url: it.rtUrl },
+      ...genres.map((g) => ({ name: g, category: 'Genres', url: `stremio:///discover/${encodeURIComponent('https://v3-cinemeta.strem.io/manifest.json')}/${it.type}/top?genre=${encodeURIComponent(g)}` })),
+      ...directors.map(link('Directors')),
+      ...cast.map(link('Cast')),
+    ],
+    trailerStreams,
+    behaviorHints: { defaultVideoId: it.type === 'movie' ? it.imdb : undefined },
+  };
+}
+
+function parseExtra(str) {
+  const out = {};
+  if (!str) return out;
+  for (const part of str.replace(/\.json$/, '').split('&')) {
+    const [k, v] = part.split('=');
+    if (k) out[k] = decodeURIComponent(v || '');
+  }
+  return out;
+}
+
+// ---------- Catalog ----------
+app.get(['/catalog/:type/:id{/:extra}', '/:config/catalog/:type/:id{/:extra}'], async (req, res) => {
+  const cfg = decodeConfig(req.params.config);
+  const id = req.params.id.replace(/\.json$/, '');
+  const cat = catalogsFor(cfg).find((c) => c.id === id && c.type === req.params.type);
+  if (!cat) return res.json({ metas: [] });
+
+  const extra = parseExtra(req.params.extra);
+  const skip = Math.max(0, parseInt(extra.skip, 10) || 0);
+  const genre = extra.genre ? GENRES[extra.genre] : null;
+  try {
+    let page;
+    if (cat.spotlight) {
+      page = skip ? [] : await getSpotlight(cfg);
+    } else {
+      const ccfg = { ...cfg, t: Math.max(cfg.t, cat.minT || 0), p: Math.max(cfg.p, cat.minP || 0) };
+      const items = await getList(buildPath(cat.list, cat.filters, genre), ccfg, skip + PAGE_SIZE);
+      page = items.slice(skip, skip + PAGE_SIZE);
+    }
+    const { results, complete } = await enrichAll(page, cat.spotlight ? 12000 : 5000);
+    const host = baseUrl(req);
+    // Short cache until every title is enriched, so the next load picks up the rest.
+    res.setHeader('Cache-Control', `public, max-age=${complete ? 3600 : 60}`);
+    res.json({ metas: page.map((it, i) => toMeta(it, cfg, host, results[i])) });
+  } catch (e) {
+    console.error('catalog error', id, e.message);
+    res.json({ metas: [] });
+  }
+});
+
+// ---------- Posters ----------
+app.get('/poster/:imdb.jpg', async (req, res) => {
+  if (!/^tt\d+$/.test(req.params.imdb)) return res.status(400).end();
+  const query = { ...req.query };
+  if (query.fallback && !String(query.fallback).startsWith('https://resizing.flixster.com/')) delete query.fallback;
+  try {
+    const img = await renderPoster(req.params.imdb, query);
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.end(img);
+  } catch (e) {
+    console.error('poster error', e.message);
+    res.redirect(`https://images.metahub.space/poster/medium/${req.params.imdb}/img`);
+  }
+});
+
+// ---------- RT detail API (used by the modded Stremio UI) ----------
+// GET /api/rt/tt123?type=movie&name=Dune&year=2021
+app.get('/api/rt/:imdb', async (req, res) => {
+  const { imdb } = req.params;
+  if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
+  try {
+    let hit = findByImdb(imdb);
+    let mediaUrl = hit?.mediaUrl;
+    let type = hit?.type || (req.query.type === 'series' ? 'series' : 'movie');
+    let guessedName = null;
+    if (!mediaUrl) {
+      let { name, year } = req.query;
+      if (!name || !year) {
+        const cm = await getCinemeta(type, imdb);
+        name = name || cm?.name;
+        year = year || String(cm?.year || '').slice(0, 4);
+      }
+      if (name) {
+        guessedName = String(name);
+        mediaUrl = await guessRtUrl(type, guessedName, String(year || '').slice(0, 4));
+      }
+    }
+    if (!mediaUrl) return res.status(404).json({ error: 'not on rotten tomatoes' });
+    const d = await getDetails(`https://www.rottentomatoes.com${mediaUrl}`);
+    // Sanity check for guessed slugs: titles must roughly agree.
+    if (!hit && guessedName) {
+      const n = (s) => String(s).toLowerCase().replace(/\(\d{4}\)/, '').replace(/[^a-z0-9]/g, '');
+      if (!n(d.title).includes(n(guessedName)) && !n(guessedName).includes(n(d.title))) {
+        return res.status(404).json({ error: 'no confident match' });
+      }
+    }
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json({ imdb, type, ...d });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// ---------- Configure UI ----------
+app.get('/api/options', (req, res) => {
+  res.json({ catalogs: BASE_CATALOGS.map(({ id, type, name, blurb }) => ({ id, type, name, blurb })), services: SERVICES });
+});
+
+app.get('/api/preview', async (req, res) => {
+  const cat = BASE_CATALOGS.find((c) => c.id === req.query.catalog) || BASE_CATALOGS[0];
+  const cfg = decodeConfig(encodeConfig({ c: [], s: [], t: req.query.t, p: req.query.p, b: true }));
+  try {
+    const items = await getList(buildPath(cat.list, cat.filters), { ...cfg, t: Math.max(cfg.t, cat.minT || 0) }, 12);
+    res.json(items.slice(0, 12).map((it) => toMeta(it, cfg, baseUrl(req))));
+  } catch (e) {
+    res.json([]);
+  }
+});
+
+app.get(['/', '/configure', '/:config/configure'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'configure.html'));
+});
+
+// ---------- Modded Stremio web UI (stremio-web fork build) ----------
+const UI_PORT = process.env.UI_PORT || 7011;
+const UI_BUILD = process.env.UI_BUILD || path.join(__dirname, '..', 'web', 'build');
+const ui = express();
+// Always revalidate: rebuilt mods reuse the same asset paths, and this is localhost anyway.
+ui.use(express.static(UI_BUILD, { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
+ui.use((req, res) => res.sendFile(path.join(UI_BUILD, 'index.html')));
+ui.listen(UI_PORT, '127.0.0.1', () => console.log(`   Stremio UI: http://127.0.0.1:${UI_PORT}/`));
+
+app.listen(PORT, () => {
+  console.log(`🍅 Rotten Tomatoes Picks running`);
+  console.log(`   Configure:  http://127.0.0.1:${PORT}/configure`);
+  console.log(`   Manifest:   http://127.0.0.1:${PORT}/manifest.json`);
+});

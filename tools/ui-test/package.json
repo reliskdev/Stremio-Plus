@@ -1,0 +1,7 @@
+{
+  "name": "stremio-plus-ui-test",
+  "private": true,
+  "description": "Headless screenshot tests for the Stremio+ UI",
+  "scripts": { "test": "node test.js all" },
+  "dependencies": { "puppeteer-core": "^23.11.1" }
+}
