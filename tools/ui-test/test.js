@@ -166,9 +166,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.reload({ waitUntil: 'networkidle2' });
     await sleep(8000);
     await shot('16-episode-list');
+    const radius = () => page.evaluate(() => getComputedStyle(document.querySelector('[class*=seasons-bar] [class*=multiselect-menu]')).borderRadius);
+    console.log('closed radius:', await radius());
+    // freeze the open/close animations halfway to look at the motion
+    const freeze = (t) => page.evaluate((t) => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = t; }), t);
+    const resume = () => page.evaluate(() => document.getAnimations().forEach((a) => a.play()));
     await clickText('Season 1');
-    await sleep(80);
+    await freeze(110);
     await shot('17a-season-dropdown-opening');
+    await resume();
     await sleep(600);
     await shot('17-season-dropdown');
     console.log('sheet:', await page.evaluate(() => {
@@ -179,6 +185,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       return JSON.stringify({ side: m.dataset.side, anim: ms.animationName, dur: ms.animationDuration, menuRadius: ms.borderRadius,
         labelRadius: ls.borderRadius, labelBg: ls.backgroundColor, menuBg: ms.backgroundColor, gap: m.getBoundingClientRect().top - l.getBoundingClientRect().bottom });
     }));
+    await clickText('Season 1');
+    await freeze(80);
+    await shot('17b-season-dropdown-closing');
+    await resume();
+    await sleep(500);
+    console.log('after close:', await radius(), await page.evaluate(() => !!document.querySelector('[data-side]')));
   }
 
   if (step === 'all' || step === 'mods') {

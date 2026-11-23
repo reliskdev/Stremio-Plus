@@ -17,3 +17,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [013 · Episode list](013-episode-list.md): IMDb rating per episode row, restyled dropdowns, episode search removed
 - [014 · Attached dropdown](014-attached-dropdown.md): dropdown label squares its edge and the list wipes out of it as one shape
 - [015 · Monochrome](015-monochrome.md): Monochrome scheme (default accent) and halved top corners on the open dropdown; Mods page crash fixed
+- [016 · Dropdown polish](016-dropdown-polish.md): label keeps its far corners, matched open/close motion, unclipped shadow, saved accent → Monochrome
