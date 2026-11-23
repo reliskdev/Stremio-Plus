@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes|mods]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -159,6 +159,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   if (step === 'all' || step === 'episodes') {
     // Episode list: IMDb ratings per row, no search, season dropdown
     await page.goto(UI + '#/detail/series/tt0773262', { waitUntil: 'networkidle2' });
+    await page.evaluate(() => { // the default accent (monochrome) unless the profile saved another
+      const s = JSON.parse(localStorage.getItem('mods:settings') || '{}'); delete s.accent;
+      localStorage.setItem('mods:settings', JSON.stringify(s));
+    });
+    await page.reload({ waitUntil: 'networkidle2' });
     await sleep(8000);
     await shot('16-episode-list');
     await clickText('Season 1');
@@ -174,6 +179,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       return JSON.stringify({ side: m.dataset.side, anim: ms.animationName, dur: ms.animationDuration, menuRadius: ms.borderRadius,
         labelRadius: ls.borderRadius, labelBg: ls.backgroundColor, menuBg: ms.backgroundColor, gap: m.getBoundingClientRect().top - l.getBoundingClientRect().bottom });
     }));
+  }
+
+  if (step === 'all' || step === 'mods') {
+    await page.goto(UI + '#/settings', { waitUntil: 'networkidle2' });
+    await sleep(3000);
+    await clickText('Mods');
+    await sleep(1500);
+    await shot('18-settings-mods');
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

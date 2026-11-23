@@ -16,3 +16,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [012 · Tooltips](012-tooltips.md): compact pill tooltips with hover delay + slide-in, no glow
 - [013 · Episode list](013-episode-list.md): IMDb rating per episode row, restyled dropdowns, episode search removed
 - [014 · Attached dropdown](014-attached-dropdown.md): dropdown label squares its edge and the list wipes out of it as one shape
+- [015 · Monochrome](015-monochrome.md): Monochrome scheme (default accent) and halved top corners on the open dropdown; Mods page crash fixed

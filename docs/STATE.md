@@ -31,13 +31,13 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Episode hero (Details with an episode selected): episode IMDb rating (IMDb datasets, `addon/data/imdb-episodes.json`)
   in Stremio's IMDb fact + RT Tomatometer fact when RT scores the episode (`/api/rt/:imdb/episode/:s/:e`).
 - Episode list: IMDb rating per row (`/api/imdb/:imdb/episodes`); episode search removed.
-- Dropdowns (MultiselectMenu, app-wide): attached sheet; the open label squares its edge and the list wipes out of it in the same colour; inset rounded rows, accent dot for selection.
+- Dropdowns (MultiselectMenu, app-wide): attached sheet; the open label squares its bottom edge (top corners halve to 0.75rem) and the list wipes out of it in the same colour; inset rounded rows, accent dot for selection.
 - Tooltips (app-wide): compact raised pill, 0.3s hover delay, slide-in, no glow.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
-  accent colour (Stremio purple, red, tomato, emerald), addon server status, reset.
+  accent / colour scheme (Monochrome default: neutral greys app-wide; Stremio purple, red, tomato, emerald), addon server status, reset.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.
