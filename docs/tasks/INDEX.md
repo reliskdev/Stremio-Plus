@@ -1,0 +1,10 @@
+# Task log
+
+One line per task, oldest first. Each links to the full write-up (brief, plan, assumptions, done, verification, follow-ups).
+
+- [001 · Rotten Tomatoes addon](001-rt-addon.md): RT catalogs with score-badged posters, IMDb matching, configure page
+- [002 · Local install fix](002-local-install.md): stremio:// forces https; install button copies the http manifest URL
+- [003 · Modded Stremio UI + RT panel](003-modded-ui-rt-panel.md): stremio-web fork via --webui-url; RT panel, Spotlight, trailers
+- [004 · Mods framework + Netflix-style home](004-mods-framework.md): Mods settings page, clean cards, wide rows with hover previews
+- [005 · Stremio+ restyle](005-stremio-plus-restyle.md): rebuilt mod UI in native Stremio vocabulary; wide rows off by default
+- [006 · Project scaffold + /small-task](006-project-scaffold.md): ~/code/stremio-plus layout, CLI, launcher, test harness, docs, skill

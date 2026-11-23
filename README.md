@@ -32,6 +32,7 @@ stremio-plus/
 │       └── …               small hooks into Board, Discover, Details, MetaItem, Settings (marked [rt-mod] / [mods])
 ├── tools/ui-test/          headless Brave screenshot harness (puppeteer-core)
 ├── launcher/               builds ~/Applications/Stremio+.app
+├── docs/                   STATE.md (current state) + tasks/ (one write-up per task)
 ├── PRODUCT.md / DESIGN.md  design context: "Stremio+", native Stremio styling, no AI-slop UI
 └── CLAUDE.md               notes for working on this with Claude Code
 ```
@@ -44,6 +45,8 @@ bin/stremio-plus apply      # after editing web/src: rebuild + restart server + 
 bin/stremio-plus test discover   # screenshots → tools/ui-test/shots/
 bin/stremio-plus vanilla    # back to stock Stremio
 ```
+
+In Claude Code: `/small-task <brief>` runs a change end to end and logs it in `docs/tasks/`.
 
 First run in the modded UI: log in to your Stremio account once (it has its own storage origin), and install the
 addon from http://127.0.0.1:7010/configure if it isn't already synced.

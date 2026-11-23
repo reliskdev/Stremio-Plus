@@ -2,6 +2,12 @@
 
 Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout and commands.
 
+## Task history (read first)
+- `docs/STATE.md`: what exists now, known issues, open follow-ups.
+- `docs/tasks/INDEX.md` → one write-up per task (brief, plan, assumptions, done, verification, follow-ups).
+- Work is usually driven by `/small-task <brief>` (skill at ~/.claude/skills/small-task): no scoping questions,
+  execute the brief, verify, commit, then log it in docs/ and update STATE.md.
+
 ## How it fits together
 - Stremio.app is never modified. `bin/stremio-plus launch` runs it with `--webui-url=http://127.0.0.1:7011/`.
 - `addon/server.js` is one Node process: Stremio addon on :7010 and static host for `web/build` on :7011.
