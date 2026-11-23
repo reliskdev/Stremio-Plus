@@ -10,3 +10,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [006 · Project scaffold + /small-task](006-project-scaffold.md): ~/code/stremio-plus layout, CLI, launcher, test harness, docs, skill
 - [007 · Discover header + grid polish](007-discover-header-grid.md): slimmer blurred search/filter pills; larger, tighter Discover grid closer to preview
 - [008 · Stock Spotlight](008-stock-spotlight.md): merged upstream, reverted Spotlight board to Stremio's own; explained separate login
+- [009 · No card titles](009-no-card-titles.md): title row hidden on all cards incl. Continue Watching; ⋮ menu moved onto the poster

@@ -24,7 +24,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - RT panel (`src/rt/RtPanel.tsx`) in Discover preview and Details hero: scores (Facts-style), synopsis with
   show more, critics consensus, audience says, trailer (mp4 or YouTube), photos + lightbox, cast, facts footer.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
-- Clean poster grids (`MetaItem`): no titles under posters; blurred hover strip with name + scores.
+- Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent colour (Stremio purple, red, tomato, emerald), addon server status, reset.
