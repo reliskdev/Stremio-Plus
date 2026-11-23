@@ -28,6 +28,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, spotlight trailers, clean grids, clean posters, RT panel),
   accent colour (Stremio purple, red, tomato, emerald), addon server status, reset.
+- Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.
 
@@ -43,4 +44,5 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 ## Open follow-ups
 - Restyle the addon configure page to DESIGN.md.
 - Consider showing RT scores in Search results and Library.
+- Discover grid still clips hard under the filter row (fade tried and removed, task 007).
 - Optional: auto-start server at login (LaunchAgent), not done.

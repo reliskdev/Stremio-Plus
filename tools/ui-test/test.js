@@ -54,6 +54,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.goto(UI + '#/discover/' + encodeURIComponent(MANIFEST) + '/movie/rt-movies-certified', { waitUntil: 'networkidle2' });
     await sleep(7000);
     await shot('04-discover');
+    // scroll the poster grid a little to check the fade under the filter row
+    await page.evaluate(() => {
+      const g = [...document.querySelectorAll('div')].find((e) => getComputedStyle(e).display === 'grid' && e.scrollHeight > e.clientHeight + 50);
+      if (g) g.scrollTop = 220;
+    });
+    await sleep(800);
+    await shot('04b-discover-grid-scrolled');
     // scroll the preview panel down to see the trailer/photos/cast
     await page.evaluate(() => {
       const b = [...document.querySelectorAll('[class*="body"]')].find((e) => e.scrollHeight > e.clientHeight + 50);
