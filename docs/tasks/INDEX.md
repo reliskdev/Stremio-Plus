@@ -14,3 +14,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [010 · Login agent](010-login-agent.md): LaunchAgent keeps server up and reopens stock Stremio with the mods
 - [011 · Episode scores](011-episode-scores.md): episode IMDb rating (IMDb datasets) + RT Tomatometer when RT has one, in the episode hero
 - [012 · Tooltips](012-tooltips.md): compact pill tooltips with hover delay + slide-in, no glow
+- [013 · Episode list](013-episode-list.md): IMDb rating per episode row, restyled dropdowns, episode search removed

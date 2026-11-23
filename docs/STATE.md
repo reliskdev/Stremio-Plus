@@ -30,6 +30,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   show more, critics consensus, audience says, trailer (mp4 or YouTube), photos + lightbox, cast, facts footer.
 - Episode hero (Details with an episode selected): episode IMDb rating (IMDb datasets, `addon/data/imdb-episodes.json`)
   in Stremio's IMDb fact + RT Tomatometer fact when RT scores the episode (`/api/rt/:imdb/episode/:s/:e`).
+- Episode list: IMDb rating per row (`/api/imdb/:imdb/episodes`); episode search removed.
+- Dropdowns (MultiselectMenu, app-wide): blurred raised panel, inset rounded rows, accent dot for selection.
 - Tooltips (app-wide): compact raised pill, 0.3s hover delay, slide-in, no glow.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.

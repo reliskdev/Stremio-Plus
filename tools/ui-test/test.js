@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -154,6 +154,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await shot('14-tooltip-early');
     await sleep(700);
     await shot('15-tooltip');
+  }
+
+  if (step === 'all' || step === 'episodes') {
+    // Episode list: IMDb ratings per row, no search, season dropdown
+    await page.goto(UI + '#/detail/series/tt0773262', { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    await shot('16-episode-list');
+    await clickText('Season 1');
+    await sleep(600);
+    await shot('17-season-dropdown');
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

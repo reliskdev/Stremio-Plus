@@ -73,4 +73,10 @@ async function imdbEpisodeRating(seriesId, season, episode) {
   return index?.[seriesId]?.[`${season}:${episode}`] ?? null;
 }
 
-module.exports = { imdbEpisodeRating, warmImdbEpisodes: load };
+async function imdbSeriesRatings(seriesId) {
+  load();
+  if (!index && building) await building;
+  return index?.[seriesId] || {};
+}
+
+module.exports = { imdbEpisodeRating, imdbSeriesRatings, warmImdbEpisodes: load };

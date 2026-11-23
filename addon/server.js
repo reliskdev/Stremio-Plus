@@ -7,7 +7,7 @@ const { renderPoster } = require('./lib/poster');
 const { getDetails } = require('./lib/details');
 const { enrichAll, getCinemeta } = require('./lib/enrich');
 const { rtEpisode } = require('./lib/episodes');
-const { imdbEpisodeRating, warmImdbEpisodes } = require('./lib/imdb-episodes');
+const { imdbEpisodeRating, imdbSeriesRatings, warmImdbEpisodes } = require('./lib/imdb-episodes');
 const pkg = require('./package.json');
 
 const PORT = process.env.PORT || 7010;
@@ -251,6 +251,14 @@ app.get('/api/rt/:imdb', async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
+});
+
+// GET /api/imdb/tt123/episodes → { "1:3": 8.2, ... } (IMDb ratings for every episode of a series)
+app.get('/api/imdb/:imdb/episodes', async (req, res) => {
+  const { imdb } = req.params;
+  if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.json(await imdbSeriesRatings(imdb).catch(() => ({})));
 });
 
 // GET /api/rt/tt123/episode/1/3?name=Dexter&year=2006 → { imdbRating, rt: { score, reviews, average, url } | null }
