@@ -7,6 +7,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - One Node server (`addon/server.js`): addon on :7010, modded UI (`web/build`) on :7011.
 - Modded UI has its own storage origin: the user logs in once there; the addon is installed by pasting
   `http://127.0.0.1:7010/<config>/manifest.json` into Stremio's addon search (stremio:// links force https).
+- Stock Stremio loads https://web.stremio.com/; the modded origin has separate storage, hence the separate login.
 
 ## Features
 ### Addon (`addon/`), also works in stock Stremio
@@ -22,11 +23,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 ### Modded UI (`web/`, branch `rt-mod`)
 - RT panel (`src/rt/RtPanel.tsx`) in Discover preview and Details hero: scores (Facts-style), synopsis with
   show more, critics consensus, audience says, trailer (mp4 or YouTube), photos + lightbox, cast, facts footer.
-- Spotlight: auto-set to RT · Spotlight once; score pills + "Certified Fresh" text; muted background trailer;
-  16s slides.
+- Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
 - Clean poster grids (`MetaItem`): no titles under posters; blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
-- Settings → Mods: toggles (wide rows, hover trailers, spotlight trailers, clean grids, clean posters, RT panel),
+- Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent colour (Stremio purple, red, tomato, emerald), addon server status, reset.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
