@@ -9,6 +9,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   `http://127.0.0.1:7010/<config>/manifest.json` into Stremio's addon search (stremio:// links force https).
 - Stock Stremio loads https://web.stremio.com/; the modded origin has separate storage, hence the separate login.
 
+- Optional login agent (`bin/stremio-plus enable`, LaunchAgent `com.stremio-plus.agent`): keeps the server up and,
+  when Stremio is opened normally (Dock/Spotlight), quits and reopens it with `--webui-url` within ~1s.
+  `vanilla` pauses this until the next `launch`; `disable` removes it. Log: `addon/data/agent.log`.
+
 ## Features
 ### Addon (`addon/`), also works in stock Stremio
 - Catalogs: RT · Spotlight (curated, always on), Popular / Certified Fresh / Critics & Audiences Agree /
@@ -45,4 +49,4 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Restyle the addon configure page to DESIGN.md.
 - Consider showing RT scores in Search results and Library.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
-- Optional: auto-start server at login (LaunchAgent), not done.
+- Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).

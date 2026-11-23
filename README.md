@@ -43,7 +43,8 @@ stremio-plus/
 bin/stremio-plus launch     # or open ~/Applications/Stremio+.app
 bin/stremio-plus apply      # after editing web/src: rebuild + restart server + relaunch Stremio
 bin/stremio-plus test discover   # screenshots → tools/ui-test/shots/
-bin/stremio-plus vanilla    # back to stock Stremio
+bin/stremio-plus vanilla    # back to stock Stremio (until the next launch)
+bin/stremio-plus enable     # login agent: server always on, Stremio always opens modded (disable: undo)
 ```
 
 In Claude Code: `/small-task <brief>` runs a change end to end and logs it in `docs/tasks/`.

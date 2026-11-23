@@ -7,8 +7,11 @@
 #   stremio-plus stop      stop the server
 #   stremio-plus restart   restart the server
 #   stremio-plus test      screenshot the UI in headless Brave (tools/ui-test)
-#   stremio-plus vanilla   reopen Stremio with its normal UI
+#   stremio-plus vanilla   reopen Stremio with its normal UI (auto-mod pauses until next launch)
 #   stremio-plus logs      follow the server log
+#   stremio-plus enable    install the login agent: server always on, Stremio always opens modded
+#   stremio-plus disable   remove the login agent
+#   stremio-plus daemon    (run by the agent) keep the server up, re-open stock Stremio with the mods
 set -euo pipefail
 export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 
@@ -18,6 +21,9 @@ WEB="$ROOT/web"
 LOG="$ADDON/data/server.log"
 UI_URL="http://127.0.0.1:7011/"
 STREMIO_BIN="/Applications/Stremio.app/Contents/MacOS/Stremio"
+VANILLA_FLAG="$ADDON/data/.vanilla"
+AGENT_LABEL="com.stremio-plus.agent"
+AGENT_PLIST="$HOME/Library/LaunchAgents/$AGENT_LABEL.plist"
 
 running() { curl -s -o /dev/null --max-time 2 http://127.0.0.1:7010/manifest.json; }
 
@@ -43,6 +49,7 @@ quit_stremio() {
 }
 
 launch() {
+  rm -f "$VANILLA_FLAG"
   start
   if pgrep -f -- "--webui-url=$UI_URL" >/dev/null; then
     open -a Stremio
@@ -50,6 +57,58 @@ launch() {
     quit_stremio
     open -a Stremio --args "--webui-url=$UI_URL"
   fi
+}
+
+# pid of a Stremio started without the modded UI (age < 20s), if any
+stock_stremio_pid() {
+  local pid args age
+  for pid in $(pgrep -f "^$STREMIO_BIN" || true); do
+    args="$(ps -o args= -p "$pid" 2>/dev/null || true)"
+    [[ "$args" == "$STREMIO_BIN"* ]] || continue
+    [[ "$args" == *"--webui-url"* ]] && continue
+    age="$(ps -o etime= -p "$pid" | tr -d ' ')"
+    [[ "$age" =~ ^(00:)?[0-1][0-9]$ ]] || continue
+    echo "$pid"; return
+  done
+}
+
+daemon() {
+  echo "$(date '+%F %T') agent started"
+  while true; do
+    running || start
+    if [[ ! -f "$VANILLA_FLAG" ]] && [[ -n "$(stock_stremio_pid)" ]]; then
+      echo "$(date '+%F %T') stock Stremio opened; reopening with the mods"
+      quit_stremio
+      open -a Stremio --args "--webui-url=$UI_URL"
+      sleep 5
+    fi
+    sleep 1
+  done
+}
+
+enable() {
+  mkdir -p "$ADDON/data" "$(dirname "$AGENT_PLIST")"
+  cat > "$AGENT_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$AGENT_LABEL</string>
+  <key>ProgramArguments</key><array><string>$ROOT/bin/stremio-plus</string><string>daemon</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>$ADDON/data/agent.log</string>
+  <key>StandardErrorPath</key><string>$ADDON/data/agent.log</string>
+</dict></plist>
+PLIST
+  launchctl bootout "gui/$(id -u)/$AGENT_LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$AGENT_PLIST"
+  echo "agent enabled: server runs at login, Stremio always opens with the mods"
+}
+
+disable() {
+  launchctl bootout "gui/$(id -u)/$AGENT_LABEL" 2>/dev/null || true
+  rm -f "$AGENT_PLIST"
+  echo "agent disabled"
 }
 
 case "${1:-launch}" in
@@ -60,7 +119,10 @@ case "${1:-launch}" in
   stop) stop ;;
   restart) stop; sleep 0.5; start ;;
   test) start; (cd "$ROOT/tools/ui-test" && node test.js "${2:-all}") ;;
-  vanilla) quit_stremio; open -a Stremio ;;
+  vanilla) mkdir -p "$ADDON/data"; touch "$VANILLA_FLAG"; quit_stremio; open -a Stremio ;;
+  daemon) daemon ;;
+  enable) enable ;;
+  disable) disable ;;
   logs) tail -f "$LOG" ;;
-  *) sed -n '2,12p' "$0"; exit 1 ;;
+  *) sed -n '2,15p' "$0"; exit 1 ;;
 esac
