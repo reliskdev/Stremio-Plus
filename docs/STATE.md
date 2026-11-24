@@ -30,7 +30,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Configure page at :7010/configure (still in the older gradient-heavy style; not yet restyled).
 
 ### Modded UI (`web/`, branch `rt-mod`)
-- RT panel (`src/rt/RtPanel.tsx`) in Discover preview and Details hero: scores (Facts-style), synopsis with
+- RT panel (`src/rt/RtPanel.tsx`) in Discover preview and Details hero (both drop Stremio's Cast / Directors rows while it shows): scores (Facts-style), synopsis with
   show more, critics consensus, audience says, trailer (mp4 or YouTube), photos + lightbox, cast, facts footer.
 - Episode hero (Details with an episode selected): episode IMDb rating (IMDb datasets, `addon/data/imdb-episodes.json`)
   in Stremio's IMDb fact + RT Tomatometer fact when RT scores the episode (`/api/rt/:imdb/episode/:s/:e`).
