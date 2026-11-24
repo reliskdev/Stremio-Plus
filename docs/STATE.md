@@ -40,6 +40,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   (ModalDialog) with the season x episode grid, IMDb / SeriesGraph community source pills, Stremio watched badges,
   "Mark watched" mode (toggles watched via MetaDetails), legend, SeriesGraph link. Scores from
   `/api/seriesgraph/:imdb` (addon proxy of seriesgraph.com's public API), else the local IMDb dataset.
+  "Random great episode" pill (Details and popup): opens a random episode rated 8.0+ (top quarter if too few);
+  partway through a show only episodes you've watched; skips the last 5 picks.
 - Episode list: IMDb rating per row (`/api/imdb/:imdb/episodes`); episode search removed.
 - Dropdowns (MultiselectMenu, app-wide): attached sheet; the open label squares only the edge touching the list (far corners unchanged) and the list wipes out of it in the same colour, folding back on close. Open: corners square first, then the sheet unfolds; close is the exact reverse; inset rounded rows, accent dot for selection.
 - Motion: house ease-out `@mods-ease` (`src/mods/motion.less`); animation plans and their status in `plans/`.

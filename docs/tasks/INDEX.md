@@ -40,3 +40,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [036 · Remembered stream preferences](036-stream-preferences.md): Settings → Mods → Streams (quality with Auto learning, size cap, audio language, avoid HDR) steer Best match and row order
 - [037 · Episode rating heatmap](037-episode-heatmap.md): series Details shows a season × episode grid of IMDb ratings (brightness = rating) under the trailer; click opens the episode
 - [038 · Episode ratings popup](038-heatmap-popup.md): Details shows a season strip; popup has the full grid with watched badges, Mark watched mode, and IMDb / SeriesGraph community scores from SeriesGraph's API
+- [039 · Random great episode](039-random-great-episode.md): "Random great episode" pill on series Details and in the ratings popup (8.0+, spoiler-safe, no repeats of the last 5)

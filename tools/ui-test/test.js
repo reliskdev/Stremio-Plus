@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores|heatmap]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores|heatmap|random]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -455,10 +455,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const q = (sel) => page.evaluate((sel) => !!document.querySelector(sel), sel);
     await page.goto(UI + '#/detail/series/tt0773262', { waitUntil: 'networkidle2' });
     await sleep(8000);
-    console.log('strip:', await page.evaluate(() => { const s = document.querySelector('[class*=strip]'); if (!s) return null; s.scrollIntoView({ block: 'center' }); return s.innerText.replace(/\s+/g, ' '); }));
+    console.log('strip:', await page.evaluate(() => { const s = document.querySelector('button[class*=strip]'); if (!s) return null; s.scrollIntoView({ block: 'center' }); return s.innerText.replace(/\s+/g, ' '); }));
     await sleep(600);
     await shot('42-ratings-strip');
-    await page.evaluate(() => document.querySelector('[class*=strip]')?.click());
+    await page.evaluate(() => document.querySelector('button[class*=strip]')?.click());
     await sleep(1500);
     console.log('popup:', await page.evaluate(() => { const p = document.querySelector('[data-episode-ratings]'); return p ? { cells: p.querySelectorAll('button[class*=cell]').length, first: p.querySelector('button[class*=cell]')?.title, progress: p.querySelector('[class*=progress]')?.innerText } : null; }));
     await shot('43-ratings-popup');
@@ -484,11 +484,53 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // Long seasons: Breaking Bad strip
     await page.goto(UI + '#/detail/series/tt0903747', { waitUntil: 'networkidle2' });
     await sleep(7000);
-    await page.evaluate(() => document.querySelector('[class*=strip]')?.click());
+    await page.evaluate(() => document.querySelector('button[class*=strip]')?.click());
     await sleep(1500);
     await shot('46-ratings-popup-bb');
   }
 
+
+  if (step === 'all' || step === 'random') {
+    // Random great episode (Details strip). Nothing watched → any Great+ episode; partway → only watched ones.
+    const DEX = UI + '#/detail/series/tt0773262';
+    const press = async () => {
+      await page.goto(DEX, { waitUntil: 'networkidle2' });
+      await sleep(5000);
+      await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Random great episode'); b.scrollIntoView({ block: 'center' }); b.click(); });
+      await sleep(2000);
+      return page.evaluate(() => decodeURIComponent(location.hash).split('/').pop());
+    };
+    await page.goto(DEX, { waitUntil: 'networkidle2' });
+    await sleep(6000);
+    await page.evaluate(() => [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Random great episode')?.scrollIntoView({ block: 'center' }));
+    await sleep(500);
+    await shot('47-random-button');
+    const picks = [];
+    for (let i = 0; i < 4; i++) picks.push(await press());
+    console.log('picks (none watched):', picks.join(' '));
+    await shot('48-random-opened');
+    // Tick S1 E1-E3 in the popup, then every pick must be one of those
+    await page.goto(DEX, { waitUntil: 'networkidle2' });
+    await sleep(5000);
+    await page.evaluate(() => document.querySelector('button[class*=strip]')?.click());
+    await sleep(1200);
+    await clickText('Mark watched');
+    const cells = (t) => page.evaluate((t) => [...document.querySelectorAll('[data-episode-ratings] button[class*=cell]')].find((b) => b.title.startsWith(t + ' '))?.click(), t);
+    for (const t of ['S1 E1', 'S1 E2', 'S1 E3']) await cells(t);
+    await sleep(1500);
+    const partial = [];
+    for (let i = 0; i < 4; i++) partial.push(await press());
+    console.log('picks (S1 E1-3 watched):', partial.join(' '));
+    // untick
+    await page.goto(DEX, { waitUntil: 'networkidle2' });
+    await sleep(5000);
+    await page.evaluate(() => document.querySelector('button[class*=strip]')?.click());
+    await sleep(1200);
+    await clickText('Mark watched');
+    for (const t of ['S1 E1', 'S1 E2', 'S1 E3']) await cells(t);
+    await sleep(1500);
+    console.log('after untick:', await page.evaluate(() => document.querySelector('[data-episode-ratings] [class*=progress]')?.innerText));
+  }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
   await browser.close();
