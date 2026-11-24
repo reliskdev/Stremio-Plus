@@ -20,3 +20,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [016 · Dropdown polish](016-dropdown-polish.md): label keeps its far corners, matched open/close motion, unclipped shadow, saved accent → Monochrome
 - [017 · Dropdown close + spacing](017-dropdown-close-spacing.md): label stays squared until the sheet has folded away; roomier options
 - [018 · Monochrome tooltips](018-mono-tooltips.md): tooltips and the seek tooltip use the dropdown's neutral surface
+- [019 · Agent crash fix](019-agent-crash.md): agent waits for stock Stremio to exit and retries the reopen; server survives agent restarts

@@ -72,15 +72,37 @@ stock_stremio_pid() {
   done
 }
 
+# Quit the stock instance, wait until it has fully exited, then open the modded one. LaunchServices refuses
+# to open an app that is still shutting down (error -600), so retry instead of failing.
+reopen_modded() {
+  local pid="$1" attempt
+  osascript -e 'quit app "Stremio"' >/dev/null 2>&1 || true
+  for _ in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+  kill -0 "$pid" 2>/dev/null && kill "$pid" 2>/dev/null
+  sleep 0.5
+  for attempt in 1 2 3 4 5 6; do
+    if open -a Stremio --args "--webui-url=$UI_URL"; then
+      echo "$(date '+%F %T') reopened with the mods (attempt $attempt)"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "$(date '+%F %T') could not reopen Stremio"
+}
+
 daemon() {
+  set +e  # a failed step must never stop the agent (launchd would restart it and kill the server with it)
   echo "$(date '+%F %T') agent started"
+  local pid
   while true; do
     running || start
-    if [[ ! -f "$VANILLA_FLAG" ]] && [[ -n "$(stock_stremio_pid)" ]]; then
-      echo "$(date '+%F %T') stock Stremio opened; reopening with the mods"
-      quit_stremio
-      open -a Stremio --args "--webui-url=$UI_URL"
-      sleep 5
+    if [[ ! -f "$VANILLA_FLAG" ]]; then
+      pid="$(stock_stremio_pid)"
+      if [[ -n "$pid" ]]; then
+        echo "$(date '+%F %T') stock Stremio opened (pid $pid); reopening with the mods"
+        reopen_modded "$pid"
+        sleep 5
+      fi
     fi
     sleep 1
   done
@@ -96,6 +118,7 @@ enable() {
   <key>ProgramArguments</key><array><string>$ROOT/bin/stremio-plus</string><string>daemon</string></array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
+  <key>AbandonProcessGroup</key><true/>
   <key>StandardOutPath</key><string>$ADDON/data/agent.log</string>
   <key>StandardErrorPath</key><string>$ADDON/data/agent.log</string>
 </dict></plist>
