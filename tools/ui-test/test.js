@@ -395,6 +395,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.evaluate(() => { const t = document.querySelector('[class*=service-content] [class*=track]'); t.scrollLeft = 900; });
     await sleep(800);
     await shot('32-service-row-scrolled');
+    // Award icons: first card of "Top rated movies" (Oscar winners) and "Top rated shows" (Emmys)
+    for (const [title, name] of [['Top rated movies', '31d-award-movie'], ['Top rated shows', '31e-award-show']]) {
+      await page.evaluate((t) => { const r = [...document.querySelectorAll('[class*=service-content] [data-board-row]')].find((x) => x.getAttribute('data-board-row') === t); r.scrollIntoView({ block: 'center' }); }, title);
+      await sleep(800);
+      const b = await page.evaluate((t) => { const r = [...document.querySelectorAll('[class*=service-content] [data-board-row]')].find((x) => x.getAttribute('data-board-row') === t); const el = r.querySelector('[class*=meta-item-container]').getBoundingClientRect(); return { x: el.x + el.width / 2, y: el.y + el.height / 2 }; }, title);
+      await page.mouse.move(b.x, b.y);
+      await sleep(4000);
+      console.log(name, await page.evaluate((t) => { const r = [...document.querySelectorAll('[class*=service-content] [data-board-row]')].find((x) => x.getAttribute('data-board-row') === t); const h = r.querySelector('[class*=mod-hover]'); return h?.innerText.replace(/\s+/g, ' ') + ' | award title=' + (h?.querySelector('[title]')?.getAttribute('title') || '-'); }, title));
+      await shot(name);
+      await page.mouse.move(5, 500);
+    }
     await page.evaluate(() => { const c = document.querySelector('[class*=service-content]'); c.scrollTop = c.scrollHeight; });
     await sleep(1500);
     await shot('33-service-page-bottom');

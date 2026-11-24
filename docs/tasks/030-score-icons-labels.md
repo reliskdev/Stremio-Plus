@@ -40,3 +40,15 @@
 ## Follow-ups
 - Labels could also show in the RT panel / Details hero.
 - Awards text comes from Cinemeta (OMDb); very new titles often have none yet.
+
+## Addendum: award icons in the score row
+- User: "Find icons for them and put them next to the popcorn/tomatometer not underneath."
+- `web/src/mods/AwardIcon.tsx`: drawn silhouettes (not the academies' artwork): Oscar statuette, Emmy winged figure
+  with atom, Golden Globe on a pedestal, BAFTA mask, trophy cup for other awards. Winners muted gold (#E3B04B),
+  nominees .64 white.
+- `addon/server.js`: `/api/card` adds `award: { kind, won, count, label }` (`awardInfo`).
+- `MetaItem.js`: award icon sits right after the Tomatometer (win count shown when >1; full label as tooltip);
+  the labels line underneath is gone (Certified Fresh / Verified Hot are carried by the score icons; "Critically
+  acclaimed" / "Audience favourite" text no longer shown). Award icon 1.3rem so statuettes read at card size.
+- Verified: `test services` hovers: Breaking Bad "96% [Emmy] 16 97%" (Won 16 Emmys), The Prestige "77% [grey Oscar]
+  92%" (Oscar nominee); icon sheet rendered large and at 16/20px to check the shapes.

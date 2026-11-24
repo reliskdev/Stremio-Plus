@@ -260,6 +260,19 @@ function awardLabel(text) {
   return null;
 }
 
+// Same text → { kind: oscar|emmy|globe|bafta|award, won, count, label } for the card's award icon.
+function awardInfo(text) {
+  const label = awardLabel(text);
+  if (!label) return null;
+  const big = text.match(/(Won|Nominated for) (\d+) (Oscars?|Primetime Emmys?|Golden Globes?|BAFTA Film Awards?)/i);
+  if (big) {
+    const kind = /oscar/i.test(big[3]) ? 'oscar' : /emmy/i.test(big[3]) ? 'emmy' : /globe/i.test(big[3]) ? 'globe' : 'bafta';
+    return { kind, won: /^won/i.test(big[1]), count: Number(big[2]), label };
+  }
+  const wins = Number(text.match(/(\d+) wins?/)?.[1] || 0);
+  return { kind: 'award', won: label === 'Award-winning', count: wins, label: label === 'Award-winning' ? `${wins} award wins` : label };
+}
+
 function cardLabels({ tomato, tomatoCertified, reviews, popcorn, popcornCertified, awards }) {
   const out = [];
   const a = awardLabel(awards);
@@ -291,6 +304,7 @@ app.get('/api/card/:imdb', async (req, res) => {
       awards: cm?.awards || null,
     };
     card.labels = cardLabels(card);
+    card.award = awardInfo(card.awards);
     res.setHeader('Cache-Control', rt === undefined ? 'no-store' : 'public, max-age=3600');
     res.json(card);
   } finally {
