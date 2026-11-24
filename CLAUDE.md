@@ -57,7 +57,7 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   before that (pre task 027) runs stale launch code: `launchctl kickstart -k gui/$(id -u)/com.stremio-plus.agent`.
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
-- The web build's TS target doesn't downlevel iterators: `[...map.entries()]` / `[...set]` become `[iterator]`.
+- The web build's TS target doesn't downlevel iterators: `[...map.entries()]` / `[...set]` silently become `[]`.
   Use `Array.from(...)`.
 - Stremio's global CSS gives every div `overflow: hidden`; containers holding a MultiselectMenu need `overflow: visible`.
 - `stremio://` links always open as https in Stremio, so the local addon is installed by pasting the

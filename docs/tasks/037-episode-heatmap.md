@@ -27,7 +27,7 @@
 - `rt/RtPanel.tsx`: `afterTrailer` slot. `routes/Details/Hero/Hero.tsx` (`// [rt-mod]`): heatmap on the series
   overview, inside the RT panel under the trailer, or on its own (`.mod-heatmap` in `Hero.less`) without RT data.
 - `tools/ui-test/test.js`: `heatmap` step (Dexter, Breaking Bad, click S2 E3).
-- Bug hit on the way: `[...map.entries()]` compiles to `[iterator]` under the build's TS target, so the grid was
+- Bug hit on the way: `[...map.entries()]` compiles to `[]` under the build's TS target, so the grid was
   empty. Uses `Array.from`; noted in CLAUDE.md gotchas.
 
 ## Verification
