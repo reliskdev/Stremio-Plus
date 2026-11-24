@@ -79,6 +79,11 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   Footer: "Liked X?" thumbs up / down (show for episodes, the movie for movies), stored on this device
   (`src/mods/ratings.ts`, `mods:ratings`). Picked for you: liked titles lead the seeds at 1.5x weight, disliked ones
   are dropped and titles similar to them pushed down (`liked` / `avoid` params on `/api/home/similar`).
+- Player tweaks (`src/mods/player/`, Settings → Mods → Player and a Player section in the player's ⋯ menu, live while
+  playing): sharper scaling (on), stronger debanding, HDR tone mapping on SDR screens (on; EDR screens left to the
+  shell), Anime4K for animation titles, night mode (dynaudnorm), dialogue boost for 5.1. macOS app only: the shell
+  whitelists mpv properties, so these go through the chrome dylib's `stremioPlusMpv` bridge to libmpv. G / H also
+  shift embedded subtitles (any platform), value shown in the stock indicator. No smooth motion (task 045).
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
@@ -104,6 +109,9 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Old-style configure page (see above).
 
 ## Open follow-ups
+- Player (task 045): smooth motion needs render-loop pacing in the dylib; embedded subtitle delay isn't remembered per
+  stream; dual subtitles and auto-synced subtitles (plans/008 B) can build on the mpv bridge.
+- `stremio-plus patch` didn't actually restart a running Stremio after updating the dylib (task 045).
 - Patch follow-ups (task 044): Windows patch (binary URL swap in stremio-shell-ng.exe, no proxy there); release v0.2.0 after the
   user has lived with it.
 - Recommendations: country fixed to US; taste refreshes on Board mount only; not yet checked with the real library (task 025).

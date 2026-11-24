@@ -43,6 +43,13 @@ install and commands.
   `apply`/`launch` rebuild it when the source changes. Can't be tested in the headless UI test.
   It also feeds macOS Now Playing: `stremioPlusMedia` handler (`src/mods/nowPlaying.ts`) + swizzled
   `-[MPNowPlayingInfoCenter setNowPlayingInfo:]`, since Stremio's shell already publishes a basic Now Playing.
+- mpv: the shell's `mpv-set-prop` IPC is a fixed whitelist (sub-delay, aid/sid, hwdec, tone-mapping, target-*…), so the
+  dylib interposes `mpv_create` and exposes libmpv through the `stremioPlusMpv` handler (`src/mods/player/mpv.ts`):
+  allowlisted props, named audio-filter / shader presets (shaders ship in `shaders/`, MIT only). Plays through
+  `vo=libmpv` (render API): display sync / interpolation don't work there (task 045).
+- Dev: with `addon/data/dev/` present at Stremio start, the dylib runs `addon/data/dev/eval.js` in the real app's page
+  (`node tools/dev-eval.js '<async body>'`). Use it to drive and inspect patched Stremio (e.g. start playback via
+  `window.core.encodeStream` + `#/player/<enc>`). A dylib change needs Stremio quit and reopened.
 - `bin/stremio-plus apply` never exits when piped (the server keeps the pipe open); run it unpiped or in the background.
 - `addon/server.js` is one Node process: Stremio addon on :7010 and static host for `web/build` on :7011.
 - The modded UI talks to the addon over HTTP: `GET :7010/api/rt/:imdb?type=&name=&year=` returns RT details

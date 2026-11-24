@@ -15,11 +15,27 @@
 // handler (web/src/mods/nowPlaying.ts) adds artwork, subtitle, duration/position/rate; a swizzled
 // -[MPNowPlayingInfoCenter setNowPlayingInfo:] merges them into whatever the shell sets. Skip and scrub commands go
 // back to the web UI as `stremio-plus-media` window events ({ action: 'skip' | 'seek', value: seconds }).
+//
+// mpv: the shell's `mpv-set-prop` IPC only accepts a fixed set of property names (a Rust enum) and four commands, so
+// player tweaks (deband, scaling, audio filters...) go through libmpv directly. `mpv_create` / `mpv_terminate_destroy`
+// are interposed to hold the shell's handle (libmpv's property API is thread-safe). The `stremioPlusMpv` handler
+// (web/src/mods/player/mpv.ts) takes { id, op, ... }:
+//   get:   { names: [...] }                       -> { values: { name: string | null } }
+//   set:   { props: { name: value | null } }      -> null restores the value we found before our first change;
+//                                                    names outside kSettable are refused
+//   af:    { presets: ['night' | 'dialogue'] }    -> our audio filters (kept apart from any the user has)
+//   shaders: { preset: 'anime4k' | null }         -> a shader chain shipped in <root>/shaders/ (no other paths)
+//   forget: { names: [...] }                      -> drop saved originals (the shell has set its own values since)
+// and answers with a `stremio-plus-mpv` window event { id, ok, values?, errors? }.
+//
+// Dev only: when <root>/addon/data/dev/ exists, <root>/addon/data/dev/eval.js is run in the page (async function
+// body) and the result written to eval.out.json, so tools can drive the real app (tools/dev-eval.js).
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
 #import <dlfcn.h>
+#import <pthread.h>
 
 static const char kStateKey;
 
@@ -293,6 +309,232 @@ static void installNowPlaying(void) {
     if (m && !sOrigSetInfo) sOrigSetInfo = method_setImplementation(m, (IMP)spSetNowPlayingInfo);
 }
 
+
+// ---- mpv bridge ----
+
+typedef struct mpv_handle mpv_handle;
+extern mpv_handle *mpv_create(void) __attribute__((weak_import));
+extern void mpv_terminate_destroy(mpv_handle *) __attribute__((weak_import));
+
+static pthread_mutex_t sMpvLock = PTHREAD_MUTEX_INITIALIZER;
+static mpv_handle *sMpv;
+
+static mpv_handle *spMpvCreate(void) {
+    mpv_handle *h = mpv_create();
+    pthread_mutex_lock(&sMpvLock);
+    if (!sMpv) sMpv = h;
+    pthread_mutex_unlock(&sMpvLock);
+    return h;
+}
+static void spMpvTerminateDestroy(mpv_handle *h) {
+    pthread_mutex_lock(&sMpvLock);
+    if (h == sMpv) sMpv = NULL;
+    pthread_mutex_unlock(&sMpvLock);
+    mpv_terminate_destroy(h);
+}
+__attribute__((used, section("__DATA,__interpose"))) static const struct { const void *replacement, *replacee; }
+    kMpvInterpose[] = {
+        { (const void *)spMpvCreate, (const void *)mpv_create },
+        { (const void *)spMpvTerminateDestroy, (const void *)mpv_terminate_destroy },
+    };
+
+typedef int (*mpv_set_string_fn)(mpv_handle *, const char *, const char *);
+typedef char *(*mpv_get_string_fn)(mpv_handle *, const char *);
+typedef void (*mpv_free_fn)(void *);
+typedef const char *(*mpv_error_string_fn)(int);
+
+// Properties the web UI may change. Anything else (scripts, config files, arbitrary filters) stays out of reach.
+static NSSet<NSString *> *kSettable;
+// Audio filter presets, labelled so we only ever add/remove our own entries in mpv's af chain.
+static NSDictionary<NSString *, NSString *> *kAfPresets;
+// Shader chains shipped in <root>/shaders/ (see the README / LICENSE there), in mpv's load order.
+static NSDictionary<NSString *, NSArray<NSString *> *> *kShaderPresets;
+
+@interface SPMpv : NSObject <WKScriptMessageHandler>
+@property (weak) WKWebView *web;
+@property (strong) NSMutableDictionary<NSString *, id> *originals; // value before our first change (NSNull = unset)
+@property (strong) dispatch_queue_t queue;
++ (instancetype)shared;
+@end
+
+@implementation SPMpv
++ (instancetype)shared {
+    static SPMpv *m;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        m = [SPMpv new];
+        m.originals = [NSMutableDictionary dictionary];
+        m.queue = dispatch_queue_create("stremio-plus.mpv", DISPATCH_QUEUE_SERIAL);
+        kSettable = [NSSet setWithArray:@[
+            @"deband", @"deband-iterations", @"deband-threshold", @"deband-range", @"deband-grain",
+            @"scale", @"cscale", @"dscale", @"scale-antiring", @"dscale-antiring", @"cscale-antiring",
+            @"correct-downscaling", @"linear-downscaling", @"sigmoid-upscaling",
+            @"tone-mapping", @"hdr-compute-peak", @"gamut-mapping-mode",
+            @"sub-delay",
+        ]];
+        // Anime4K v4 "Mode A (Fast)": restore + 2x CNN upscale, with downscalers for when 2x overshoots.
+        kShaderPresets = @{ @"anime4k": @[
+            @"anime4k/Anime4K_Clamp_Highlights.glsl", @"anime4k/Anime4K_Restore_CNN_M.glsl",
+            @"anime4k/Anime4K_Upscale_CNN_x2_M.glsl", @"anime4k/Anime4K_AutoDownscalePre_x2.glsl",
+            @"anime4k/Anime4K_AutoDownscalePre_x4.glsl", @"anime4k/Anime4K_Upscale_CNN_x2_S.glsl",
+        ] };
+        kAfPresets = @{
+            @"night": @"@spnight:lavfi=[dynaudnorm=f=150:g=15]",
+            // Lift the centre (dialogue) channel when downmixing 5.1 to stereo.
+            @"dialogue": @"@spdialog:lavfi=[pan=stereo|FL=FC+0.6*FL+0.3*BL+0.3*SL|FR=FC+0.6*FR+0.3*BR+0.3*SR]",
+        };
+    });
+    return m;
+}
+
+static NSString *spRoot(void);
+
+- (void)reply:(NSDictionary *)d {
+    WKWebView *web = self.web;
+    if (!web) return;
+    NSData *json = [NSJSONSerialization dataWithJSONObject:d options:0 error:nil];
+    if (!json) return;
+    NSString *js = [NSString stringWithFormat:
+        @"window.dispatchEvent(new CustomEvent('stremio-plus-mpv',{detail:%@}))",
+        [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding]];
+    dispatch_async(dispatch_get_main_queue(), ^{ [web evaluateJavaScript:js completionHandler:nil]; });
+}
+
+// Called on self.queue with sMpvLock held.
+static id spGet(mpv_handle *h, NSString *name) {
+    static mpv_get_string_fn get; static mpv_free_fn fr;
+    if (!get) { get = (mpv_get_string_fn)dlsym(RTLD_DEFAULT, "mpv_get_property_string"); fr = (mpv_free_fn)dlsym(RTLD_DEFAULT, "mpv_free"); }
+    if (!get || !fr) return [NSNull null];
+    char *v = get(h, name.UTF8String);
+    if (!v) return [NSNull null];
+    NSString *s = @(v) ?: @"";
+    fr(v);
+    return s;
+}
+static NSString *spSet(mpv_handle *h, NSString *name, NSString *value) {
+    static mpv_set_string_fn set; static mpv_error_string_fn err;
+    if (!set) { set = (mpv_set_string_fn)dlsym(RTLD_DEFAULT, "mpv_set_property_string"); err = (mpv_error_string_fn)dlsym(RTLD_DEFAULT, "mpv_error_string"); }
+    if (!set) return @"no libmpv";
+    int r = set(h, name.UTF8String, value.UTF8String);
+    return r < 0 ? (err ? @(err(r)) : @"error") : nil;
+}
+static NSString *spCommand(mpv_handle *h, NSString *cmd) {
+    static int (*run)(mpv_handle *, const char *); static mpv_error_string_fn err;
+    if (!run) { run = dlsym(RTLD_DEFAULT, "mpv_command_string"); err = (mpv_error_string_fn)dlsym(RTLD_DEFAULT, "mpv_error_string"); }
+    if (!run) return @"no libmpv";
+    int r = run(h, cmd.UTF8String);
+    return r < 0 ? (err ? @(err(r)) : @"error") : nil;
+}
+
+// value nil = back to what mpv had before our first change.
+- (void)set:(mpv_handle *)h name:(NSString *)name value:(NSString *)value values:(NSMutableDictionary *)values errors:(NSMutableDictionary *)errors {
+    if (!value) {
+        id orig = self.originals[name];
+        if (!orig) { values[name] = spGet(h, name); return; }
+        value = [orig isKindOfClass:[NSString class]] ? orig : @"";
+        [self.originals removeObjectForKey:name];
+    } else if (!self.originals[name]) {
+        self.originals[name] = spGet(h, name);
+    }
+    NSString *e = spSet(h, name, value);
+    if (e) errors[name] = e;
+    values[name] = spGet(h, name);
+}
+
+- (void)handle:(NSDictionary *)b {
+    NSString *op = b[@"op"];
+    id rid = b[@"id"] ?: [NSNull null];
+    NSMutableDictionary *values = [NSMutableDictionary dictionary];
+    NSMutableDictionary *errors = [NSMutableDictionary dictionary];
+    pthread_mutex_lock(&sMpvLock);
+    mpv_handle *h = sMpv;
+    if (!h) {
+        pthread_mutex_unlock(&sMpvLock);
+        [self reply:@{ @"id": rid, @"ok": @NO, @"error": @"no mpv" }];
+        return;
+    }
+    if ([op isEqual:@"get"]) {
+        for (id n in b[@"names"]) if ([n isKindOfClass:[NSString class]]) values[n] = spGet(h, n);
+    } else if ([op isEqual:@"set"]) {
+        NSDictionary *props = [b[@"props"] isKindOfClass:[NSDictionary class]] ? b[@"props"] : @{};
+        for (NSString *name in props) {
+            if (![name isKindOfClass:[NSString class]] || ![kSettable containsObject:name]) { errors[name ?: @"?"] = @"not allowed"; continue; }
+            id v = props[name];
+            NSString *value = [v isKindOfClass:[NSString class]] ? v : [v isKindOfClass:[NSNumber class]] ? [v stringValue] : nil;
+            [self set:h name:name value:value values:values errors:errors];
+        }
+    } else if ([op isEqual:@"forget"]) {
+        // The shell has set these itself since our change (e.g. EDR tone mapping): keep its values, drop ours.
+        for (id n in b[@"names"]) if ([n isKindOfClass:[NSString class]]) [self.originals removeObjectForKey:n];
+    } else if ([op isEqual:@"shaders"]) {
+        NSArray *files = [b[@"preset"] isKindOfClass:[NSString class]] ? kShaderPresets[b[@"preset"]] : nil;
+        if (b[@"preset"] && b[@"preset"] != [NSNull null] && !files) errors[@"preset"] = @"unknown preset";
+        else {
+            NSString *dir = [spRoot() stringByAppendingPathComponent:@"shaders"];
+            NSMutableArray *paths = [NSMutableArray array];
+            for (NSString *f in files) [paths addObject:[dir stringByAppendingPathComponent:f]];
+            for (NSString *path in paths) if (![[NSFileManager defaultManager] fileExistsAtPath:path]) errors[@"preset"] = @"shader missing";
+            if (!errors.count) [self set:h name:@"glsl-shaders" value:files ? [paths componentsJoinedByString:@":"] : nil values:values errors:errors];
+        }
+    } else if ([op isEqual:@"af"]) {
+        NSArray *want = [b[@"presets"] isKindOfClass:[NSArray class]] ? b[@"presets"] : @[];
+        for (NSString *key in kAfPresets) {
+            NSString *label = [[kAfPresets[key] componentsSeparatedByString:@":"] firstObject];
+            spCommand(h, [NSString stringWithFormat:@"af remove %@", label]);
+        }
+        for (NSString *key in want) {
+            NSString *f = [key isKindOfClass:[NSString class]] ? kAfPresets[key] : nil;
+            if (!f) { errors[key] = @"unknown preset"; continue; }
+            NSString *e = spCommand(h, [NSString stringWithFormat:@"af add \"%@\"", f]);
+            if (e) errors[key] = e;
+        }
+        values[@"af"] = spGet(h, @"af");
+    } else {
+        errors[@"op"] = @"unknown op";
+    }
+    pthread_mutex_unlock(&sMpvLock);
+    [self reply:@{ @"id": rid, @"ok": @(errors.count == 0), @"values": values, @"errors": errors }];
+}
+
+- (void)userContentController:(WKUserContentController *)ucc didReceiveScriptMessage:(WKScriptMessage *)msg {
+    NSDictionary *b = [msg.body isKindOfClass:[NSDictionary class]] ? msg.body : nil;
+    if (!b) return;
+    if (msg.webView) self.web = msg.webView;
+    dispatch_async(self.queue, ^{ [self handle:b]; });
+}
+@end
+
+// ---- dev eval channel ----
+
+static void startDevEval(WKWebView *web, NSString *root) {
+    NSString *dir = [root stringByAppendingPathComponent:@"addon/data/dev"];
+    BOOL isDir = NO;
+    if (![[NSFileManager defaultManager] fileExistsAtPath:dir isDirectory:&isDir] || !isDir) return;
+    NSString *in = [dir stringByAppendingPathComponent:@"eval.js"];
+    NSString *out = [dir stringByAppendingPathComponent:@"eval.out.json"];
+    __weak WKWebView *weakWeb = web;
+    NSLog(@"[stremio-plus] dev eval channel on %@", in);
+    [NSTimer scheduledTimerWithTimeInterval:0.3 repeats:YES block:^(NSTimer *t) {
+        WKWebView *w = weakWeb;
+        if (!w) { [t invalidate]; return; }
+        NSString *js = [NSString stringWithContentsOfFile:in encoding:NSUTF8StringEncoding error:nil];
+        if (!js) return;
+        [[NSFileManager defaultManager] removeItemAtPath:in error:nil];
+        if (@available(macOS 11.0, *)) {
+            [w callAsyncJavaScript:js arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld
+                 completionHandler:^(id result, NSError *error) {
+                NSDictionary *d = error ? @{ @"error": error.localizedDescription ?: @"error",
+                                              @"detail": error.userInfo[@"WKJavaScriptExceptionMessage"] ?: @"" }
+                                        : @{ @"result": result ?: [NSNull null] };
+                NSData *json = [NSJSONSerialization isValidJSONObject:d]
+                    ? [NSJSONSerialization dataWithJSONObject:d options:0 error:nil]
+                    : [@"{\"result\":\"(not JSON)\"}" dataUsingEncoding:NSUTF8StringEncoding];
+                [json writeToFile:out atomically:YES];
+            }];
+        }
+    }];
+}
+
 static WKWebView *findWebView(NSView *v) {
     if ([v isKindOfClass:[WKWebView class]]) return (WKWebView *)v;
     for (NSView *s in v.subviews) {
@@ -303,7 +545,7 @@ static WKWebView *findWebView(NSView *v) {
 }
 
 static NSString *const kFlagJS =
-    @"window.__stremioPlusChrome = true; window.dispatchEvent(new Event('stremio-plus-chrome'));";
+    @"window.__stremioPlusChrome = true; window.__stremioPlusMpv = true; window.dispatchEvent(new Event('stremio-plus-chrome'));";
 
 static void configure(NSWindow *w) {
     if (objc_getAssociatedObject(w, &kStateKey)) return;
@@ -337,6 +579,9 @@ static void configure(NSWindow *w) {
     [ucc addScriptMessageHandler:state name:@"stremioPlusChrome"];
     [ucc addScriptMessageHandler:[SPMedia shared] name:@"stremioPlusMedia"];
     [SPMedia shared].web = web;
+    [ucc addScriptMessageHandler:[SPMpv shared] name:@"stremioPlusMpv"];
+    [SPMpv shared].web = web;
+    startDevEval(web, spRoot());
     [ucc addUserScript:[[WKUserScript alloc] initWithSource:kFlagJS
                                               injectionTime:WKUserScriptInjectionTimeAtDocumentStart
                                            forMainFrameOnly:YES]];
@@ -357,6 +602,8 @@ static void configure(NSWindow *w) {
 
 // Stremio+ root: a bundled copy finds it in libstremio-plus-chrome.root next to itself (written by the patch); the
 // launcher-injected copy lives in <root>/shell/build/.
+static NSString *stremioPlusRoot(void);
+static NSString *spRoot(void) { return stremioPlusRoot(); }
 static NSString *stremioPlusRoot(void) {
     Dl_info info;
     if (!dladdr((const void *)stremioPlusRoot, &info) || !info.dli_fname) return nil;

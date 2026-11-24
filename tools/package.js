@@ -44,6 +44,7 @@ copy('addon', 'addon', (src) => !ADDON_SKIP.has(path.relative(path.join(P.ROOT, 
 copy('cli');
 copy('bin');
 copy('shell/chrome.m');
+copy('shaders');
 if (fs.existsSync(path.join(P.ROOT, 'shell', 'build'))) copy('shell/build');
 copy('web/build', 'ui', (src) => !src.endsWith('.map'));
 ['package.json', 'README.md', 'install.sh', 'install.ps1'].forEach((f) => copy(f));

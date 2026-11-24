@@ -39,7 +39,9 @@ const buildChrome = (universal = false) => {
     fs.mkdirSync(path.dirname(CHROME_LIB), { recursive: true });
     const arch = universal ? ['-arch', 'arm64', '-arch', 'x86_64'] : ['-arch', process.arch === 'x64' ? 'x86_64' : 'arm64'];
     const r = run('xcrun', ['clang', '-dynamiclib', '-fobjc-arc', ...arch, '-mmacosx-version-min=11.0',
-        '-framework', 'Cocoa', '-framework', 'WebKit', '-framework', 'MediaPlayer', '-o', CHROME_LIB, CHROME_SRC]);
+        '-framework', 'Cocoa', '-framework', 'WebKit', '-framework', 'MediaPlayer',
+        // libmpv lives in Stremio.app; these resolve against it at load time (weak, so a missing libmpv is harmless).
+        '-Wl,-U,_mpv_create', '-Wl,-U,_mpv_terminate_destroy', '-o', CHROME_LIB, CHROME_SRC]);
     if (!r.ok) {
         console.error(`chrome dylib build failed; launching without it\n${r.err}`);
         fs.rmSync(CHROME_LIB, { force: true });

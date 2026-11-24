@@ -18,6 +18,10 @@ A. player upgrades (do first), B. "pick a good subtitle and sync it to the dialo
   the handle (interpose `mpv_create` / `mpv_initialize` from a launch-time library) and call `mpv_set_property_string`.
 - Windows' shell (stremio-shell-ng) speaks the same `mpv-*` IPC, so UI-side work should carry over.
 
+**Update (task 045):** probed. The shell whitelists; the dylib bridge to libmpv is built (`stremioPlusMpv`). Shipped:
+scaling, deband, HDR on SDR, Anime4K, night mode, dialogue boost, G/H for embedded subs. Smooth motion doesn't work
+under the shell's render loop (measured). See docs/tasks/045-player-mpv.md.
+
 ## A. Player upgrade candidates (mpv properties)
 
 | Feature | mpv | Notes |
