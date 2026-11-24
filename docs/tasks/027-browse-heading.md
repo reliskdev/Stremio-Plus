@@ -39,3 +39,10 @@
   reopened it with `--webui-url` but without `DYLD_INSERT_LIBRARIES`.
 - Fix: `daemon()` re-execs itself when `bin/stremio-plus` changes (mtime check each loop). Agent restarted
   (`launchctl kickstart -k`), Stremio quit and relaunched; `vmmap` shows the chrome dylib loaded.
+
+## Addendum: traffic light alignment
+- User: "Fix the alignment" (screenshot of the window corner).
+- The cluster was centred over the nav column: ~11pt from the left edge but ~23pt from the top, so it looked
+  jammed into the corner. `shell/chrome.m` now uses the same inset on the left as on top (`left = cy - radius`);
+  vertical centre still matches the search bar. Trade-off: the yellow light no longer sits exactly over the nav icons.
+- Verified: `apply` compiled + dylib rebuilt; screencapture of the live window shows equal top/left insets (~23pt).

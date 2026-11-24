@@ -47,8 +47,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent / colour scheme (Monochrome default: neutral greys app-wide; Stremio purple, red, tomato, emerald), addon server status, reset.
-- Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, centred in the nav bar where the
-  logo was; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
+- Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, level with the search bar, same inset
+  from the left edge as from the top; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
   with the player controls. Web side: `src/mods/macChrome.ts`.
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),

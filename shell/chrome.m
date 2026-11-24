@@ -110,7 +110,9 @@ static BOOL inAny(NSArray<NSValue *> *list, NSPoint p) {
     CGFloat spacing = mini.frame.origin.x - close.frame.origin.x;
     CGFloat cluster = (2 * spacing + zoom.frame.size.width) * scale;
     CGFloat cy = self.hasLights ? self.lightsCY : 20;
-    CGFloat left = self.hasLights ? self.lightsX + (self.lightsW - cluster) / 2 : 20;
+    // Same inset from the left edge as from the top, so the cluster sits square in the window corner (centring it
+    // over the nav column left ~11pt at the side against ~23pt above, which read as misaligned).
+    CGFloat left = self.hasLights ? MAX(self.lightsX, cy - bh * scale / 2) : 20;
     CGFloat height = MAX(bh * scale, round(cy * 2));
     NSRect f = container.frame;
     f.size.height = height;
