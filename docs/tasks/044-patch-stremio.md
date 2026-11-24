@@ -38,3 +38,12 @@
 - Windows: no proxy in stremio-shell-ng; patch the WEB_ENDPOINT string in the exe instead (its own origin then, no
   storage clash).
 - Mod settings/ratings in localStorage start fresh inside patched Stremio (new origin), as does the login.
+
+## Addendum: Stremio+ launch animation
+- `cli/splash.js`: the patch also replaces `Contents/MacOS/splash.mp4` / `splash.jpg`, rendered locally from the user's
+  own copies with Stremio's bundled ffmpeg (we don't ship Stremio's artwork): hue shifted to purple, retimed (skip the
+  first 0.6 s, 1.25x) because Stremio drops the splash as soon as the UI is ready (~1.3 s warm), and a dotted white "+"
+  (the triangle's dot pattern, drawn with sharp) that spins in beside the diamond at ~0.7 s. The still is Stremio's clean
+  still recoloured + the settled plus. Cached in `addon/data/splash/<version>/`; backed up and restored with the rest
+  (older backups get the splash added on the next patch). Config `splash: false` keeps Stremio's own.
+- Verified with screenshots during a plain `open -a Stremio`: purple particles → diamond with "+", then the UI.

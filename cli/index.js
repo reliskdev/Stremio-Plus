@@ -131,7 +131,7 @@ const vanilla = async () => {
 const patch = async () => {
     requireStremio();
     const running = platform.procs();
-    console.log(patcher.patch());
+    console.log(await patcher.patch());
     writeConfig({ patch: true });
     if (running.length) {
         console.log('restarting Stremio to load the patch…');
@@ -188,7 +188,7 @@ const daemon = async () => {
             if (!await serverUp()) await start({ quiet: true });
             // A Stremio update replaces the patched files: patch the new version (unless the user restored).
             if (patcher.supported() && readConfig().patch !== false && patcher.status() === 'stock') {
-                try { agentLog(patcher.patch()); writeConfig({ patch: true }); } catch (e) { agentLog(`patch failed: ${e.message}`); }
+                try { agentLog(await patcher.patch()); writeConfig({ patch: true }); } catch (e) { agentLog(`patch failed: ${e.message}`); }
             }
             // Patched Stremio needs no swapping; only unpatched launches get closed and reopened with --webui-url.
             if (!patched() && !fs.existsSync(P.VANILLA_FLAG) && !platform.check()) {
@@ -256,7 +256,7 @@ const setup = async () => {
         let agent = platform.autostartEnabled();
         if (patcher.supported() && readConfig().patch !== false) {
             try {
-                console.log(patcher.patch());
+                console.log(await patcher.patch());
                 writeConfig({ patch: true });
                 agent = true; // a patched Stremio needs the server up whenever it opens (it falls back to stock otherwise)
             } catch (e) {

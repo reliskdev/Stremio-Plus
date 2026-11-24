@@ -5,7 +5,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 ## Running it
 - macOS: Stremio is patched (task 044, `stremio-plus patch` / `restore` / `status`; `setup` patches and enables the
   agent). Opening Stremio any way loads the mods with no relaunch; the Stremio+ launcher additionally injects the
-  window-chrome dylib (a plain Dock/Spotlight launch has the normal title bar for now).
+  window-chrome dylib (a plain Dock/Spotlight launch has the normal title bar for now). The patch also swaps the
+  launch animation for a purple one with a dotted "+" (`cli/splash.js`, rendered locally from Stremio's own splash).
 - `bin/stremio-plus launch` or ~/Applications/Stremio+.app → Stremio.app with `--webui-url=http://127.0.0.1:7011/`.
 - Cross-platform since task 043: Node CLI (`cli/`), per-OS modules for macOS / Windows / Linux, one-line installers
   (`install.sh`, `install.ps1`) that fetch the release tarball from GitHub (`tools/package.js` builds it; prebuilt UI

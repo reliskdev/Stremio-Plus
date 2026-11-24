@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const P = require('./paths');
-const { run } = require('./util');
+const { run, readConfig } = require('./util');
 
 const BEGIN = '/*stremio-plus:begin*/';
 const END = '/*stremio-plus:end*/';
@@ -23,6 +23,9 @@ const MAC = {
     exe: `${MAC_APP}/Contents/MacOS/Stremio`,
     sig: `${MAC_APP}/Contents/_CodeSignature`,
     plist: `${MAC_APP}/Contents/Info.plist`,
+    ffmpeg: `${MAC_APP}/Contents/MacOS/ffmpeg`,
+    splashVideo: `${MAC_APP}/Contents/MacOS/splash.mp4`,
+    splashImage: `${MAC_APP}/Contents/MacOS/splash.jpg`,
 };
 
 // Anchors in Stremio's server.js (shell 5.1.x). If an update changes them, patching refuses instead of guessing.
@@ -67,19 +70,29 @@ const ditto = (from, to) => {
     if (!r.ok) throw new Error(`copy failed (${from} → ${to}): ${r.err}`);
 };
 
-const sign = (entitlements) => {
-    // server.js sits in Contents/MacOS, so it is signed as code of its own (signature in xattrs) before the bundle.
-    const js = run('codesign', ['--force', '--sign', '-', MAC.server]);
-    if (!js.ok) throw new Error(`signing server.js failed: ${js.err}`);
+const sign = (entitlements, files) => {
+    // Files in Contents/MacOS (server.js, the splash) are signed as code of their own (signature in xattrs), then the bundle.
+    for (const file of files) {
+        const r = run('codesign', ['--force', '--sign', '-', file]);
+        if (!r.ok) throw new Error(`signing ${path.basename(file)} failed: ${r.err}`);
+    }
     const r = run('codesign', ['--force', '--sign', '-', '--options', 'runtime', '--entitlements', entitlements, MAC_APP]);
     if (!r.ok) throw new Error(`re-signing Stremio failed: ${r.err}`);
     const v = run('codesign', ['--verify', '--strict', MAC_APP]);
     if (!v.ok) throw new Error(`Stremio's signature doesn't verify after patching: ${v.err}`);
 };
 
+const backupSplash = (dir) => {
+    // Backups made before the splash existed (task 044) lack it; Stremio's splash was never touched before, so take it now.
+    for (const file of [MAC.splashVideo, MAC.splashImage]) {
+        const copy = path.join(dir, path.basename(file));
+        if (!fs.existsSync(copy) && fs.existsSync(file)) ditto(file, copy);
+    }
+};
+
 const macBackup = () => {
     const dir = macBackupDir();
-    if (fs.existsSync(path.join(dir, 'complete'))) return dir;
+    if (fs.existsSync(path.join(dir, 'complete'))) { backupSplash(dir); return dir; }
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
     ditto(MAC.server, path.join(dir, 'server.js'));
@@ -88,11 +101,31 @@ const macBackup = () => {
     const ent = run('codesign', ['-d', '--entitlements', ':-', MAC_APP]);
     if (!ent.ok || !ent.out.includes('<plist')) throw new Error('could not read Stremio\'s entitlements');
     fs.writeFileSync(path.join(dir, 'entitlements.plist'), ent.out);
+    backupSplash(dir);
     fs.writeFileSync(path.join(dir, 'complete'), new Date().toISOString());
     return dir;
 };
 
-const macPatch = () => {
+// Render the Stremio+ splash once per Stremio version (cached in addon/data/splash/<version>/). Optional: a failure
+// (no sharp yet, ffmpeg missing) leaves Stremio's own splash.
+const prepareSplash = async (backup) => {
+    if (readConfig().splash === false) return null;
+    const out = path.join(P.DATA, 'splash', macVersion());
+    const ready = ['splash.mp4', 'splash.jpg'].every((f) => fs.existsSync(path.join(out, f)))
+        && fs.statSync(path.join(out, 'splash.mp4')).mtimeMs >= fs.statSync(path.join(__dirname, 'splash.js')).mtimeMs;
+    if (!ready) {
+        fs.mkdirSync(out, { recursive: true });
+        await require('./splash').render({
+            ffmpeg: MAC.ffmpeg,
+            srcVideo: path.join(backup, 'splash.mp4'),
+            srcImage: path.join(backup, 'splash.jpg'),
+            outDir: out,
+        });
+    }
+    return { video: path.join(out, 'splash.mp4'), image: path.join(out, 'splash.jpg') };
+};
+
+const macPatch = async () => {
     const status = macStatus();
     if (status === 'patched') return 'already patched';
     if (status === 'missing') throw new Error(`Stremio isn't installed in ${MAC_APP}`);
@@ -105,12 +138,20 @@ const macPatch = () => {
     const patched = helper() + src
         .replace(FETCH_CALL, '})), globalThis.__stremioPlusFetch(dest, req, headers, httpsAgent, opts, cfgOpts, handleFetchWithRedirects).then(')
         .replace(IS_WEBUI, `${IS_WEBUI} || ${JSON.stringify(UI_HOST)} === source.host`);
+    let splash = null;
+    try { splash = await prepareSplash(dir); } catch (e) { console.warn(`keeping Stremio's splash (${e.message.split('\n')[0]})`); }
     fs.writeFileSync(MAC.server, patched);
+    const files = [MAC.server];
     try {
+        if (splash) {
+            fs.copyFileSync(splash.video, MAC.splashVideo);
+            fs.copyFileSync(splash.image, MAC.splashImage);
+            files.push(MAC.splashVideo, MAC.splashImage);
+        }
         // A broken server.js means Stremio starts without its streaming server: check with Stremio's own node first.
         const check = run(`${MAC_APP}/Contents/MacOS/node`, ['--check', MAC.server]);
         if (!check.ok) throw new Error(`patched server.js doesn't parse: ${check.err.split('\n').slice(0, 4).join(' ')}`);
-        sign(path.join(dir, 'entitlements.plist'));
+        sign(path.join(dir, 'entitlements.plist'), files);
     } catch (e) {
         macRestore();
         throw e;
@@ -126,6 +167,10 @@ const macRestore = () => {
     }
     fs.rmSync(MAC.server, { force: true }); // replace the file, not just its bytes, so its xattr signature comes back too
     ditto(path.join(dir, 'server.js'), MAC.server);
+    for (const file of [MAC.splashVideo, MAC.splashImage]) {
+        const copy = path.join(dir, path.basename(file));
+        if (fs.existsSync(copy)) { fs.rmSync(file, { force: true }); ditto(copy, file); }
+    }
     ditto(path.join(dir, 'Stremio'), MAC.exe);
     fs.rmSync(MAC.sig, { recursive: true, force: true });
     ditto(path.join(dir, '_CodeSignature'), MAC.sig);
