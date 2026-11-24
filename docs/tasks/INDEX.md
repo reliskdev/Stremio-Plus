@@ -29,3 +29,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [025 · Recommendations home + genre browse](025-recommendations-home.md): picks from your library, top this week per service, Genres page on the nav (JustWatch); genre row later removed from the Board
 - [026 · Preview card scroll fades](026-preview-scroll-fades.md): preview panel content fades at the edges with more content instead of clipping; tighter gap above the buttons
 - [027 · Browse page heading](027-browse-heading.md): Genres / See All page says what it shows ("Trending on Netflix") and how it's ranked
+- [028 · Streaming service hubs](028-service-hubs.md): Board row of service logo cards; each opens a service page with sideways-scrolling top movies / shows / trending / popular / new / top rated rows

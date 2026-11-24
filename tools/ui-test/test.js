@@ -356,6 +356,32 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('items after scroll:', await count());
   }
 
+  if (step === 'all' || step === 'services') {
+    // Streaming services row on the Board and a service page (#/service/netflix).
+    await page.goto(UI + '#/', { waitUntil: 'networkidle2' });
+    await page.evaluate(() => localStorage.setItem('mods:taste', JSON.stringify({
+      seeds: [{ id: 'tt15239678', type: 'movie', name: 'Dune: Part Two' }, { id: 'tt11280740', type: 'series', name: 'Severance' }],
+      exclude: ['tt15239678', 'tt11280740'], at: Date.now(),
+    })));
+    await page.reload({ waitUntil: 'networkidle2' });
+    await sleep(8000);
+    console.log('rows:', await page.evaluate(() => [...document.querySelectorAll('[data-board-row]')].map((r) => r.getAttribute('data-board-row')).join(' | ')));
+    await page.evaluate(() => { const r = document.querySelector('[data-board-row="Streaming services"]'); r && r.scrollIntoView({ block: 'center' }); });
+    await sleep(1500);
+    await shot('30-services-row');
+    await page.evaluate(() => { const a = document.querySelector('[data-board-row="Streaming services"] a[href="#/service/netflix"]'); a && a.click(); });
+    await sleep(7000);
+    console.log('opened:', await page.evaluate(() => location.hash));
+    console.log('sections:', await page.evaluate(() => [...document.querySelectorAll('[data-board-row]')].map((r) => `${r.getAttribute('data-board-row')} (${r.querySelectorAll('[class*=meta-item-container]').length})`).join(' | ')));
+    await shot('31-service-page');
+    await page.evaluate(() => { const t = document.querySelector('[class*=service-content] [class*=track]'); t.scrollLeft = 900; });
+    await sleep(800);
+    await shot('32-service-row-scrolled');
+    await page.evaluate(() => { const c = document.querySelector('[class*=service-content]'); c.scrollTop = c.scrollHeight; });
+    await sleep(1500);
+    await shot('33-service-page-bottom');
+  }
+
   console.log('errors:', errors.slice(0, 15).join('\n'));
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

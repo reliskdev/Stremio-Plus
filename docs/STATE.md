@@ -26,7 +26,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Posters with score badges (`/poster/tt….jpg`, sharp), toggleable.
 - `/api/rt/:imdb/episode/:s/:e`: episode IMDb rating + RT Tomatometer.
 - `/api/rt/:imdb`: RT details for any title (known match or URL-slug guess with title sanity check).
-- `/api/home/*` (JustWatch, US): weekly charts per service, similar-title picks, filtered browse for the Genres page.
+- `/api/home/*` (JustWatch, US): services + icons, service pages, weekly charts, similar-title picks, filtered browse for the Genres page.
 - Configure page at :7010/configure (still in the older gradient-heavy style; not yet restyled).
 
 ### Modded UI (`web/`, branch `rt-mod`)
@@ -40,9 +40,11 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Tooltips (app-wide): first one after 0.3s, neighbours instant; compact pill in the dropdown surface colour (neutral in Monochrome), 0.3s hover delay, slide-in, no glow.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
 - Recommendations home (`src/mods/home/`, toggle `recsHome`, on): after Continue Watching, "Picked for you" (blend of
-  titles similar to your library, watched first), then "Top this week on <service>" and
-  "Because you watched X" rows interleaved (no genre row: genres live on the nav tab); addon rows below. Services picked in Settings → Mods → Home.
-- Genres page (`#/genres`, nav tab; chart rows' See All land here): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
+  titles similar to your library, watched first), a "Streaming services" row of logo cards (all 10, the ones picked in
+  Settings → Mods → Home first), then "Because you watched X" rows; addon rows below.
+- Service pages (`#/service/:id`, `ServicePage.tsx`): logo + name header, sideways-scrolling rows (top movies / shows
+  this week, trending, popular movies / shows, new releases, top rated movies / shows), no See All.
+- Genres page (`#/genres`, nav tab): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),

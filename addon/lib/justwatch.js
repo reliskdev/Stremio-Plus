@@ -158,8 +158,8 @@ async function recommendations(seeds, exclude = new Set()) {
 }
 
 // Filtered browse for the Genres page. Cursor pagination via JustWatch's `after`.
-async function browse({ genre, type, service, sort, after }, limit = 40) {
-  const f = {};
+async function browse({ genre, type, service, sort, after, extra }, limit = 40) {
+  const f = { ...(extra || {}) };
   if (genre && GENRES[genre]) f.genres = [genre];
   if (type === 'movie') f.objectTypes = ['MOVIE'];
   else if (type === 'series') f.objectTypes = ['SHOW'];
@@ -175,4 +175,61 @@ async function browse({ genre, type, service, sort, after }, limit = 40) {
   return { items: dedupe(p.edges.map((e) => toItem(e.node))), next: p.pageInfo.hasNextPage ? p.pageInfo.endCursor : null };
 }
 
-module.exports = { SERVICES, GENRES, SORTS, weeklyChart, recommendations, browse };
+// Service app icons (JustWatch package icons, square, 332px). Fetched once per TTL with the package list.
+async function serviceIcons() {
+  const d = await gql(`query($c: Country!) { packages(country: $c, platform: WEB) { shortName icon(profile: S332) } }`, {});
+  const byCode = new Map(d.packages.map((p) => [p.shortName, p.icon]));
+  return Object.fromEntries(Object.entries(SERVICES).map(([id, s]) => {
+    const icon = s.packages.map((c) => byCode.get(c)).find(Boolean);
+    return [id, icon ? `https://images.justwatch.com${icon.replace('{format}', 'png')}` : null];
+  }));
+}
+
+async function serviceList() {
+  const icons = await serviceIcons().catch(() => ({}));
+  return Object.entries(SERVICES).map(([id, s]) => ({ id, name: s.name, icon: icons[id] || null }));
+}
+
+// One chart (movies or shows) for a service, in rank order.
+async function typeChart(serviceId, objectType, limit = 20) {
+  const q = `query($c: Country!, $f: StreamingChartsFilter, $n: Int!) {
+    streamingCharts(country: $c, first: $n, filter: $f) { edges { node { objectType ${CONTENT} } } }
+  }`;
+  const d = await gql(q, { n: limit, f: { category: 'WEEKLY_POPULARITY_SAME_CONTENT_TYPE', objectType, packages: SERVICES[serviceId].packages } });
+  return dedupe(d.streamingCharts.edges.map((e) => toItem(e.node)));
+}
+
+// Best IMDb scores among the service's 100 most popular titles of a type.
+async function topRated(serviceId, type) {
+  const { items } = await browse({ service: serviceId, type, sort: 'popular', extra: { imdbScore: { min: 7.5 } } }, 100);
+  return items.sort((a, b) => (b.imdbScore || 0) - (a.imdbScore || 0)).slice(0, 30);
+}
+
+// Everything the service page shows: header info and its rows. Rows that fail or come back empty are dropped.
+async function servicePage(serviceId) {
+  const svc = SERVICES[serviceId];
+  if (!svc) return null;
+  const rows = [
+    ['top-movies', 'Top movies this week', () => typeChart(serviceId, 'MOVIE')],
+    ['top-shows', 'Top shows this week', () => typeChart(serviceId, 'SHOW')],
+    ['trending', 'Trending now', () => browse({ service: serviceId, sort: 'trending' }, 30)],
+    ['popular-movies', 'Popular movies', () => browse({ service: serviceId, type: 'movie', sort: 'popular' }, 30)],
+    ['popular-shows', 'Popular shows', () => browse({ service: serviceId, type: 'series', sort: 'popular' }, 30)],
+    // JustWatch's own year/score sorts surface obscure titles; popular ones filtered by year or score read better.
+    ['newest', 'New releases', () => browse({ service: serviceId, sort: 'popular', extra: { releaseYear: { min: new Date().getFullYear() - 1 } } }, 30)],
+    ['rated-movies', 'Top rated movies', () => topRated(serviceId, 'movie')],
+    ['rated-shows', 'Top rated shows', () => topRated(serviceId, 'series')],
+  ];
+  const [icons, ...lists] = await Promise.all([
+    serviceIcons().catch(() => ({})),
+    ...rows.map(([, , load]) => load().then((r) => (Array.isArray(r) ? r : r.items)).catch(() => [])),
+  ]);
+  return {
+    id: serviceId,
+    name: svc.name,
+    icon: icons[serviceId] || null,
+    sections: rows.map(([key, title], i) => ({ key, title, items: lists[i] })).filter((r) => r.items.length >= 5),
+  };
+}
+
+module.exports = { SERVICES, GENRES, SORTS, weeklyChart, recommendations, browse, serviceList, servicePage };

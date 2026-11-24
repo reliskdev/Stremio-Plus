@@ -298,6 +298,28 @@ app.get('/api/home/chart/:service', async (req, res) => {
   }
 });
 
+// GET /api/home/services → [{ id, name, icon }]
+app.get('/api/home/services', async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json(await jw.serviceList());
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// GET /api/home/service/netflix → { id, name, icon, sections: [{ key, title, items }] }
+app.get('/api/home/service/:service', async (req, res) => {
+  try {
+    const page = await jw.servicePage(req.params.service);
+    if (!page) return res.status(404).json({ error: 'unknown service' });
+    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.json(page);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // GET /api/home/similar?seeds=tt1:movie:Dune,tt2:series:Severance&exclude=tt3,tt4 → { forYou, because }
 app.get('/api/home/similar', async (req, res) => {
   const seeds = String(req.query.seeds || '').split(',').slice(0, 8).map((s) => {
