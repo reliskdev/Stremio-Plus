@@ -114,8 +114,15 @@ reopen_modded() {
 daemon() {
   set +e  # a failed step must never stop the agent (launchd would restart it and kill the server with it)
   echo "$(date '+%F %T') agent started"
-  local pid
+  local pid self="${BASH_SOURCE[0]}" stamp
+  stamp="$(stat -f %m "$self")"
   while true; do
+    # bash keeps the functions it loaded at start, so a long-running agent would keep reopening Stremio with
+    # stale launch code (e.g. without the chrome dylib). Re-exec when this script changes.
+    if [[ "$(stat -f %m "$self" 2>/dev/null)" != "$stamp" ]]; then
+      echo "$(date '+%F %T') script changed; reloading agent"
+      exec /bin/bash "$self" daemon
+    fi
     running || start
     if [[ ! -f "$VANILLA_FLAG" ]]; then
       pid="$(stock_stremio_pid)"

@@ -53,6 +53,8 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   as variables, not inline strings. Introspection is disabled.
 
 ## Environment gotchas
+- The login agent (`bin/stremio-plus daemon`) re-execs itself when `bin/stremio-plus` changes; an agent started
+  before that (pre task 027) runs stale launch code: `launchctl kickstart -k gui/$(id -u)/com.stremio-plus.agent`.
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
 - Stremio's global CSS gives every div `overflow: hidden`; containers holding a MultiselectMenu need `overflow: visible`.

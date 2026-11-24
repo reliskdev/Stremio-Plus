@@ -31,3 +31,11 @@
 ## Follow-ups
 - "See All" on a chart row opens JustWatch Trending, not the exact 20-item weekly chart; a true "Top this week"
   view (rank order) could be added if wanted.
+
+## Addendum: title bar came back
+- User: "What happened to the header" (stock macOS title bar, no mods chrome).
+- Cause: the login agent (`bin/stremio-plus daemon`) had been running since 11:07, before task 022 added dylib
+  injection. Bash keeps the functions it loaded at start, so when Stremio was opened normally at 13:44 the agent
+  reopened it with `--webui-url` but without `DYLD_INSERT_LIBRARIES`.
+- Fix: `daemon()` re-execs itself when `bin/stremio-plus` changes (mtime check each loop). Agent restarted
+  (`launchctl kickstart -k`), Stremio quit and relaunched; `vmmap` shows the chrome dylib loaded.
