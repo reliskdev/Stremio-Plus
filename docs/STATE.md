@@ -42,7 +42,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Recommendations home (`src/mods/home/`, toggle `recsHome`, on): after Continue Watching, "Picked for you" (blend of
   titles similar to your library, watched first), then "Top this week on <service>" and
   "Because you watched X" rows interleaved (no genre row: genres live on the nav tab); addon rows below. Services picked in Settings → Mods → Home.
-- Genres page (`#/genres`, nav tab): genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
+- Genres page (`#/genres`, nav tab; chart rows' See All land here): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),

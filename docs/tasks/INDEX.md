@@ -28,3 +28,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [024 · Player header scrim](024-player-header-scrim.md): darker, taller eased scrim behind the player's top bar so the title reads over bright frames
 - [025 · Recommendations home + genre browse](025-recommendations-home.md): picks from your library, top this week per service, Genres page on the nav (JustWatch); genre row later removed from the Board
 - [026 · Preview card scroll fades](026-preview-scroll-fades.md): preview panel content fades at the edges with more content instead of clipping; tighter gap above the buttons
+- [027 · Browse page heading](027-browse-heading.md): Genres / See All page says what it shows ("Trending on Netflix") and how it's ranked
