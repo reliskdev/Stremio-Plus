@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -414,6 +414,30 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.evaluate(() => document.querySelector('[class*=service-container] [class*=back-button-container]')?.click());
     await sleep(2500);
     console.log('after back:', await page.evaluate(() => location.hash));
+  }
+
+  if (step === 'all' || step === 'scores') {
+    // Hover scores on Search results and Library cards (same /api/card lookup as the Board).
+    const hoverFirst = async (scope, name) => {
+      const b = await page.evaluate((scope) => { const el = document.querySelector(scope + ' [class*=meta-item-container]'); if (!el) return null; el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, scope);
+      if (!b) { console.log(name, 'no card'); await shot(name); return; }
+      await page.mouse.move(b.x, b.y);
+      await sleep(5000);
+      console.log(name, await page.evaluate((scope) => document.querySelector(scope + ' [class*=meta-item-container] [class*=mod-hover]')?.innerText.replace(/\s+/g, ' ') || '(no hover strip)', scope));
+      await shot(name);
+      await page.mouse.move(5, 500);
+    };
+    await page.goto(UI + '#/search?search=' + encodeURIComponent('dune part two'), { waitUntil: 'networkidle2' });
+    await sleep(6000);
+    await hoverFirst('[class*=search-container]', '40-search-hover');
+    // Put a known title in the library, then hover it there.
+    await page.goto(UI + '#/detail/movie/tt0110912/tt0110912', { waitUntil: 'networkidle2' });
+    await sleep(5000);
+    console.log('library add:', await page.evaluate(() => { const els = [...document.querySelectorAll('[title], [aria-label]')]; const b = els.find((e) => /library/i.test(e.getAttribute('title') || e.getAttribute('aria-label') || '')); if (!b) return 'no button; titles: ' + els.map((e) => e.getAttribute('title') || e.getAttribute('aria-label')).slice(0, 30).join(' / '); const t = b.getAttribute('title') || b.getAttribute('aria-label'); if (/remove/i.test(t)) return 'already in'; b.click(); return 'added (' + t + ')'; }));
+    await sleep(1500);
+    await page.goto(UI + '#/library', { waitUntil: 'networkidle2' });
+    await sleep(5000);
+    await hoverFirst('[class*=library-container]', '41-library-hover');
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

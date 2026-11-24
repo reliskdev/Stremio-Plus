@@ -46,7 +46,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   this week, trending, popular movies / shows, new releases, top rated movies / shows), no See All.
 - Genres page (`#/genres`, nav tab): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Board poster rows (incl. Continue Watching): 14.5rem posters, tight gaps, sideways scroll like the service pages (`routes/Board/styles.less`).
-- Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name, Tomatometer left and Popcornmeter right (certified icons for Certified Fresh / Verified Hot), and an award icon next to the Tomatometer (Oscar / Emmy / Golden Globe / BAFTA / trophy; gold = won with count, grey = nominated) from `/api/card/:imdb`, fetched on hover; JustWatch rows also get popcorn from `data/popcorn.json`.
+- Clean poster grids (`MetaItem`): no titles under any card (incl. Search, Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name, Tomatometer left and Popcornmeter right (certified icons for Certified Fresh / Verified Hot), and an award icon next to the Tomatometer (Oscar / Emmy / Golden Globe / BAFTA / trophy; gold = won with count, grey = nominated) from `/api/card/:imdb`, fetched on hover; JustWatch rows also get popcorn from `data/popcorn.json`.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent / colour scheme (Monochrome default: neutral greys app-wide; Stremio purple, red, tomato, emerald), addon server status, reset.
@@ -77,7 +77,6 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 ## Open follow-ups
 - Recommendations: country fixed to US; taste refreshes on Board mount only; not yet checked with the real library (task 025).
 - Restyle the addon configure page to DESIGN.md.
-- Consider showing RT scores in Search results and Library.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
 - Title bar: player and fullscreen behaviour not yet checked (task 022).
 - Stream picker: remember preferred quality; language preference (assumes English); Spotlight buttons can sit

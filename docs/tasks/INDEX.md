@@ -36,3 +36,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [032 · Board posters like the service page](032-board-big-posters.md): home poster rows use 14.5rem posters with tight gaps and scroll sideways
 - [033 · Service page banner](033-service-banner.md): full-bleed fading banner (the #1 title's backdrop) behind the service logo and name
 - [034 · Back button on service pages](034-service-back-button.md): service pages show Stremio's back chevron (MainNavBars `backButton`)
+- [035 · Scores in Search and Library](035-scores-search-library.md): already covered by the clean card hover; added a `scores` test step (Library unverifiable as guest)
