@@ -68,6 +68,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     });
     await sleep(1500);
     await shot('05-discover-scrolled');
+    // scroll-edge fades on the preview body: bottom at the top, both mid-way, top at the end
+    const fades = () => page.evaluate(() => {
+      const b = [...document.querySelectorAll('[class*="meta-preview"] [class*="body"]')].find((e) => e.scrollHeight > e.clientHeight + 50);
+      return b ? `class=${b.className.replace(/-[\w]{5}\b/g, '')} mask=${getComputedStyle(b).maskImage.slice(0, 90)}` : 'no scrollable body';
+    });
+    console.log('fade at end:', await fades());
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[class*="meta-preview"] [class*="body"]')].find((e) => e.scrollHeight > e.clientHeight + 50); if (b) b.scrollTop = 0; });
+    await sleep(600);
+    console.log('fade at top:', await fades());
+    await shot('05b-preview-fade-top');
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[class*="meta-preview"] [class*="body"]')].find((e) => e.scrollHeight > e.clientHeight + 50); if (b) b.scrollTop = 380; });
+    await sleep(600);
+    console.log('fade mid:', await fades());
+    await shot('05c-preview-fade-mid');
   }
 
   if (step === 'flix') {

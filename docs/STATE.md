@@ -55,6 +55,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
   (quality, HDR, size, source/codec/audio/seeds/site, flags, release dimmed), addon errors as one dim line.
   Toggle in Settings → Mods.
+- Preview panel (MetaPreview, Discover / Player drawer / guide): scroll-edge fades (top once scrolled, bottom while more
+  below) instead of a hard clip; `src/mods/useScrollEdges.ts`.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.
