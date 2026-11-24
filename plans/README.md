@@ -18,3 +18,4 @@ Not planned: RT trailer poster→player swap (the video's poster is the same ima
 
 All seven implemented in task 020 (docs/tasks/020-motion-audit.md). 002 needed one extra change: in portal mode the
 click-catching layer covers the label, so the reopen is detected in the close-request handler (point over the closing label).
+- [008 · Player upgrades and auto-synced subtitles](008-player-and-subtitle-sync.md): mpv bridge findings, upgrade candidates, subtitle pick + dialogue sync theory
