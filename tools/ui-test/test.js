@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores|heatmap|random]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores|heatmap|random|upnext]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -530,6 +530,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     for (const t of ['S1 E1', 'S1 E2', 'S1 E3']) await cells(t);
     await sleep(1500);
     console.log('after untick:', await page.evaluate(() => document.querySelector('[data-episode-ratings] [class*=progress]')?.innerText));
+  }
+
+  if (step === 'all' || step === 'upnext') {
+    // Up next card: needs a local mp4 on :7099 with Range support (serve any file; ~3 min works best).
+    const CM = encodeURIComponent('https://v3-cinemeta.strem.io/manifest.json');
+    const stream = encodeURIComponent(Buffer.from(require('zlib').deflateSync(JSON.stringify({ url: 'http://127.0.0.1:7099/test.mp4' }))).toString('base64'));
+    const nearEnd = async (left) => {
+      await page.waitForFunction(() => { const v = document.querySelector('video'); return v && v.duration > 0; }, { timeout: 20000 });
+      await page.evaluate((left) => { const v = document.querySelector('video'); v.currentTime = v.duration - left; v.play(); }, left);
+    };
+    // Episode (Rick and Morty S7 E7 → E8)
+    await page.goto(UI + '#/player/' + stream + '/' + CM + '/' + CM + '/series/tt2861424/' + encodeURIComponent('tt2861424:7:7'), { waitUntil: 'networkidle2' });
+    await nearEnd(25);
+    await sleep(3500);
+    console.log('episode card:', await page.evaluate(() => document.querySelector('[class*=up-next]')?.innerText.replace(/\n/g, ' | ')));
+    await shot('49-upnext-episode');
+    console.log('focused:', await page.evaluate(() => document.activeElement?.innerText));
+    // Movie (The Shawshank Redemption → similar title)
+    await page.goto(UI + '#/', { waitUntil: 'networkidle2' });
+    await sleep(1500);
+    await page.goto(UI + '#/player/' + stream + '/' + CM + '/' + CM + '/movie/tt0111161/tt0111161', { waitUntil: 'networkidle2' });
+    await nearEnd(40);
+    await sleep(5000);
+    console.log('movie card:', await page.evaluate(() => document.querySelector('[class*=up-next]')?.innerText.replace(/\n/g, ' | ')));
+    await shot('50-upnext-movie');
+    await page.mouse.move(800, 300);
+    await sleep(4500); // controls fade; the movie card stays
+    await shot('51-upnext-movie-immersed');
+    await clickText('Dismiss');
+    await sleep(800);
+    console.log('after dismiss, card shown:', await page.evaluate(() => !!document.querySelector('[class*=up-next]')));
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

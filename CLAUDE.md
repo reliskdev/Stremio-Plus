@@ -31,7 +31,7 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   `no-cache`, so a rebuild + Stremio reload (Cmd+R or `apply`) picks it up.
 - Typecheck: `cd web && npx tsc --noEmit -p .`
 - Verify visually with `bin/stremio-plus test <step>` and read the PNGs in `tools/ui-test/shots/`
-  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion, recs, services, scores, heatmap). The test browser profile lives in
+  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion, recs, services, scores, heatmap, random, upnext). `upnext` needs a Range-capable mp4 server on :7099. The test browser profile lives in
   `tools/ui-test/.profile` (guest account with the addon installed).
 
 ## Design rules (from PRODUCT.md / DESIGN.md, user feedback)

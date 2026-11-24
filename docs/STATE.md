@@ -65,6 +65,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   the episode still (else backdrop, else poster), title + "Show · S1 E2" (movies: year), duration and a moving position;
   ±skip (Stremio's seek step) and scrubbing seek the player. Merged into the shell's own Now Playing (swizzled
   `setNowPlayingInfo:`); play/pause/next stay the shell's. Cleared when the player closes.
+- Up next card (`src/mods/UpNext.tsx`): episodes replace the stock next-video popup (same timing, focus, dismissal)
+  with still, title, "Show · S1 E2" + IMDb rating; movies show a similar title not in your library (Tomatometer 75+
+  preferred, `/api/home/similar`) in the credits window (6% of runtime, 2 to 8 min), staying up when the controls fade,
+  with Details / Dismiss. Live TV keeps the stock popup.
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows

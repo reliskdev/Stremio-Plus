@@ -42,3 +42,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [038 · Episode ratings popup](038-heatmap-popup.md): Details shows a season strip; popup has the full grid with watched badges, Mark watched mode, and IMDb / SeriesGraph community scores from SeriesGraph's API
 - [039 · Random great episode](039-random-great-episode.md): "Random great episode" pill on series Details and in the ratings popup (8.0+, spoiler-safe, no repeats of the last 5)
 - [040 · Now Playing integration](040-now-playing.md): Control Center gets episode artwork, "Show · S1 E2", a moving scrubber, ±skip and scrubbing (dylib merges into the shell's Now Playing); cleared when the player closes
+- [041 · Up next card](041-up-next.md): player card near the end: next episode with IMDb rating (replaces the stock popup), or in a movie's credits a similar title you don't own with its Tomatometer
