@@ -44,3 +44,8 @@
 - Mouse users without a trackpad only get shift+wheel; hover arrows could be added.
 - Genres page "See All" from the old chart rows no longer has an entry point from the Board (still in the nav).
 - Country fixed to US.
+
+## Addendum: bigger, tighter posters
+- User: "Cards should be larger in the streaming page, and closer together."
+- `ServicePage.less`: posters 11rem → 14.5rem wide; MetaItem's 1rem padding overridden to 0.35rem (gap ~0.7rem);
+  header, row titles and first poster realigned to one edge. Verified with `test services` (31-service-page.png).
