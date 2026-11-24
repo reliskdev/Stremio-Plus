@@ -255,17 +255,21 @@ const popcorn = (() => {
   const save = () => { clearTimeout(timer); timer = setTimeout(() => fs.writeFile(FILE, JSON.stringify(store), () => {}), 2000); };
   const queue = new Map();
   let active = 0;
+  // Direct lookups (a card being hovered, the RT panel) go first: the background fill pauses while any are running.
+  let direct = 0;
   const pump = () => {
-    while (active < 3 && queue.size) {
+    while (direct === 0 && active < 2 && queue.size) {
       const [imdb, it] = queue.entries().next().value;
       queue.delete(imdb);
       active++;
       resolveRt(imdb, { type: it.type, name: it.name, year: it.year })
-        .then((r) => { if (!r) remember(imdb, null); })
-        .catch(() => remember(imdb, null))
+        .then((r) => { if (!r) remember(imdb, null); }) // not on RT; a network error isn't remembered
+        .catch(() => {})
         .finally(() => { active--; pump(); });
     }
   };
+  const directStart = () => { direct++; };
+  const directEnd = () => { direct = Math.max(0, direct - 1); pump(); };
   function remember(imdb, p, t = null) { store[imdb] = { p, t, at: Date.now() }; save(); }
   const known = (imdb) => { const e = store[imdb]; return e && (e.p !== null || Date.now() - e.at < MISS_RETRY) ? e : null; };
   // Adds `popcorn` to each item that has a known score and queues the rest.
@@ -278,12 +282,13 @@ const popcorn = (() => {
     if (out.tomato == null && typeof e.t === 'number') out.tomato = e.t;
     return out;
   });
-  return { remember, enrich };
+  return { remember, enrich, directStart, directEnd };
 })();
 
 app.get('/api/rt/:imdb', async (req, res) => {
   const { imdb } = req.params;
   if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
+  popcorn.directStart();
   try {
     const r = await resolveRt(imdb, req.query);
     if (!r) return res.status(404).json({ error: 'not on rotten tomatoes' });
@@ -291,6 +296,8 @@ app.get('/api/rt/:imdb', async (req, res) => {
     res.json({ imdb, type: r.type, ...r.details });
   } catch (e) {
     res.status(502).json({ error: e.message });
+  } finally {
+    popcorn.directEnd();
   }
 });
 

@@ -40,3 +40,14 @@
   hover (`/api/rt/:imdb`, cached); year shows only when no score is known.
 - Verified: `test services` hover on the first "Popular - Movie" (Cinemeta) card: "The Bodyguard 92% 72%"
   (tt6611324, RT's Guarding Stars, same id).
+
+## Addendum: scores taking a minute to appear
+- User: The Grand Tour showed no scores, then they "popped up" after a minute; Criminal Minds had popcorn only.
+- Causes: a failed/slow first lookup was kept as "no scores" (UI session cache; `fetchRt` only retried after 60s) and
+  the server wrote network errors into `popcorn.json` as "not on RT" for 7 days; hover lookups also competed with
+  the background fill (3 parallel RT scrapes).
+- Fixes: `usePopcorn` keeps only successful lookups and calls new `forgetRt()` so the next hover retries at once;
+  the background queue drops to 2 at a time and pauses while any direct `/api/rt` request runs; errors are no longer
+  remembered (41 bad empty entries removed from `popcorn.json`).
+- Criminal Minds: RT has no series-level Tomatometer for it (only per season), so popcorn alone is correct.
+- Verified: uncached direct lookup ~2.9s with the queue busy (then instant); `test services` hovers still show scores.
