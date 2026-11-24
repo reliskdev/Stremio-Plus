@@ -42,7 +42,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Recommendations home (`src/mods/home/`, toggle `recsHome`, on): after Continue Watching, "Picked for you" (blend of
   titles similar to your library, watched first), a "Streaming services" row of logo cards (all 10, the ones picked in
   Settings → Mods → Home first), then "Because you watched X" rows; addon rows below.
-- Service pages (`#/service/:id`, `ServicePage.tsx`): logo + name header, sideways-scrolling rows (top movies / shows
+- Service pages (`#/service/:id`, `ServicePage.tsx`): full-bleed banner (backdrop of the #1 title this week, fades out, runs under the nav bars) with logo, name and "Top this week: X", sideways-scrolling rows (top movies / shows
   this week, trending, popular movies / shows, new releases, top rated movies / shows), no See All.
 - Genres page (`#/genres`, nav tab): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Board poster rows (incl. Continue Watching): 14.5rem posters, tight gaps, sideways scroll like the service pages (`routes/Board/styles.less`).
