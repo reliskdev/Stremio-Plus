@@ -451,26 +451,44 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   if (step === 'all' || step === 'heatmap') {
-    // Episode ratings grid on series Details (Dexter: 12-episode seasons; Breaking Bad: 16, dense cells)
-    for (const [id, name] of [['tt0773262', '42-heatmap-dexter'], ['tt0903747', '43-heatmap-dense']]) {
-      await page.goto(UI + '#/detail/series/' + id, { waitUntil: 'networkidle2' });
-      await sleep(8000);
-      const info = await page.evaluate(() => {
-        const h = [...document.querySelectorAll('[class*=heatmap]')].find((e) => /(^| )heatmap/.test([...e.classList].join(' ').replace(/[-_][\w]+$/g, '')) || e.querySelector('[class*=cell]'));
-        if (!h) return null;
-        h.scrollIntoView({ block: 'center' });
-        return { rows: h.querySelectorAll('[class*=row]').length, cells: h.querySelectorAll('button').length, first: h.querySelector('button')?.title };
-      });
-      console.log(name, JSON.stringify(info));
-      await sleep(800);
-      await shot(name);
-    }
-    // Click S2 E3 on Breaking Bad: should open that episode
-    const clicked = await page.evaluate(() => { const b = [...document.querySelectorAll('button[title^="S2 E3"]')][0]; if (!b) return false; b.click(); return b.title; });
-    await sleep(3000);
-    console.log('clicked:', clicked, '→', await page.evaluate(() => decodeURIComponent(location.hash)));
-    await shot('44-heatmap-clicked');
+    // Episode ratings: strip on series Details → popup (SeriesGraph scores, watched ticks, Mark watched)
+    const q = (sel) => page.evaluate((sel) => !!document.querySelector(sel), sel);
+    await page.goto(UI + '#/detail/series/tt0773262', { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    console.log('strip:', await page.evaluate(() => { const s = document.querySelector('[class*=strip]'); if (!s) return null; s.scrollIntoView({ block: 'center' }); return s.innerText.replace(/\s+/g, ' '); }));
+    await sleep(600);
+    await shot('42-ratings-strip');
+    await page.evaluate(() => document.querySelector('[class*=strip]')?.click());
+    await sleep(1500);
+    console.log('popup:', await page.evaluate(() => { const p = document.querySelector('[data-episode-ratings]'); return p ? { cells: p.querySelectorAll('button[class*=cell]').length, first: p.querySelector('button[class*=cell]')?.title, progress: p.querySelector('[class*=progress]')?.innerText } : null; }));
+    await shot('43-ratings-popup');
+    // Tick off S1 E1 and S1 E2, check the count, then untick them again
+    await clickText('Mark watched');
+    await sleep(300);
+    for (const t of ['S1 E1', 'S1 E2']) await page.evaluate((t) => [...document.querySelectorAll('[data-episode-ratings] [class*=cell]')].find((b) => b.title.startsWith(t + ' '))?.click(), t);
+    await sleep(1500);
+    console.log('after tick:', await page.evaluate(() => ({ progress: document.querySelector('[data-episode-ratings] [class*=progress]')?.innerText, ticks: document.querySelectorAll('[data-episode-ratings] button[class*=watched]').length })));
+    await shot('44-ratings-ticked');
+    await clickText('SeriesGraph community');
+    await sleep(600);
+    console.log('community first:', await page.evaluate(() => document.querySelector('[data-episode-ratings] button[class*=cell]')?.title));
+    await shot('45-ratings-community');
+    for (const t of ['S1 E1', 'S1 E2']) await page.evaluate((t) => [...document.querySelectorAll('[data-episode-ratings] [class*=cell]')].find((b) => b.title.startsWith(t + ' '))?.click(), t);
+    await sleep(1200);
+    console.log('after untick:', await page.evaluate(() => document.querySelector('[data-episode-ratings] [class*=progress]')?.innerText));
+    await clickText('Done');
+    // Normal click opens the episode and closes the popup
+    await page.evaluate(() => [...document.querySelectorAll('[data-episode-ratings] [class*=cell]')].find((b) => b.title.startsWith('S2 E3 '))?.click());
+    await sleep(2500);
+    console.log('opened:', await page.evaluate(() => decodeURIComponent(location.hash)), 'popup open:', await q('[data-episode-ratings]'));
+    // Long seasons: Breaking Bad strip
+    await page.goto(UI + '#/detail/series/tt0903747', { waitUntil: 'networkidle2' });
+    await sleep(7000);
+    await page.evaluate(() => document.querySelector('[class*=strip]')?.click());
+    await sleep(1500);
+    await shot('46-ratings-popup-bb');
   }
+
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
   await browser.close();

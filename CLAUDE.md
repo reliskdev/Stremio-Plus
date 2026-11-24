@@ -47,6 +47,8 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   (lists: movies_at_home, movies_in_theaters, tv_series_browse; filters like `critics:fresh~sort:popular`,
   `affiliates:netflix`, `genres:horror`). TV has no certified flag in browse data.
   Trailers: `link.theplatform.com/s/NGweTC/media/<publicId>?formats=MPEG4` redirects to the mp4.
+- SeriesGraph (`lib/seriesgraph.js`): public `seriesgraph.com/api/shows/:tmdb/season-ratings` and
+  `/api/community-ratings/:tmdb/season-ratings`, keyed by TMDB id (Cinemeta's `moviedb_id`). User endpoints need login.
 - Title → IMDb matching via Cinemeta search (`lib/match.js`); ~98% hit rate.
 - Recommendations use JustWatch's public GraphQL (`lib/justwatch.js`, `apis.justwatch.com/graphql`, no key, US):
   `streamingCharts` (weekly), `node(id){similarTitlesV2}`, `popularTitles` (filters/sort). Enum values must be passed

@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { GENRES, SERVICES, BASE_CATALOGS, encodeConfig, decodeConfig, catalogsFor } = require('./lib/config');
+const { seriesGraph } = require('./lib/seriesgraph');
 const { buildPath, fetchPage } = require('./lib/rt');
 const { resolveAll, findByImdb, guessRtUrl } = require('./lib/match');
 const { renderPoster } = require('./lib/poster');
@@ -377,6 +378,14 @@ app.get('/api/imdb/:imdb/episodes', async (req, res) => {
   if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.json(await imdbSeriesRatings(imdb).catch(() => ({})));
+});
+
+// GET /api/seriesgraph/tt123 → { tmdb, url, imdb: { "1:3": 8.2 }, community: { "1:3": { avg, count } } }
+app.get('/api/seriesgraph/:imdb', async (req, res) => {
+  const { imdb } = req.params;
+  if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.json(await seriesGraph(imdb).catch(() => ({ tmdb: null, imdb: {}, community: {} })));
 });
 
 // GET /api/rt/tt123/episode/1/3?name=Dexter&year=2006 → { imdbRating, rt: { score, reviews, average, url } | null }
