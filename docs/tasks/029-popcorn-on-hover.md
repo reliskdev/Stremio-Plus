@@ -31,3 +31,12 @@
 
 ## Follow-ups
 - First visit to a fresh row shows popcorn only on hover until the background queue fills it (next load).
+
+## Addendum: scores on every movie/series card
+- User: Obsession card showed only "2026" (screenshot), "a lot are" missing.
+- Cause: cards from Cinemeta and other non-RT addons carry no scores in releaseInfo, and the hover lookup only ran
+  for cards that already had a 🍅.
+- `MetaItem.js`: any clean movie/series card with an IMDb id and no listed Popcornmeter looks both scores up on
+  hover (`/api/rt/:imdb`, cached); year shows only when no score is known.
+- Verified: `test services` hover on the first "Popular - Movie" (Cinemeta) card: "The Bodyguard 92% 72%"
+  (tt6611324, RT's Guarding Stars, same id).

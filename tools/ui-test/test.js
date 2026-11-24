@@ -369,6 +369,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.evaluate(() => { const r = document.querySelector('[data-board-row="Streaming services"]'); r && r.scrollIntoView({ block: 'center' }); });
     await sleep(1500);
     await shot('30-services-row');
+    // Cinemeta cards carry no RT scores; hovering one looks them up.
+    await page.evaluate(() => { const r = document.querySelector('[data-board-row="Popular - Movie"]'); r && r.scrollIntoView({ block: 'center' }); });
+    await sleep(1200);
+    const cm = await page.evaluate(() => { const el = document.querySelector('[data-board-row="Popular - Movie"] [class*=meta-item-container]'); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await page.mouse.move(cm.x, cm.y);
+    await sleep(6000);
+    console.log('cinemeta hover:', await page.evaluate(() => document.querySelector('[data-board-row="Popular - Movie"] [class*=meta-item-container] [class*=mod-hover]')?.innerText.replace(/\s+/g, ' ')));
+    await shot('30b-cinemeta-hover');
+    await page.mouse.move(5, 500);
     await page.evaluate(() => { const a = document.querySelector('[data-board-row="Streaming services"] a[href="#/service/netflix"]'); a && a.click(); });
     await sleep(7000);
     console.log('opened:', await page.evaluate(() => location.hash));
