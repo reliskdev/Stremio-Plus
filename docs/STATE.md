@@ -108,5 +108,6 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Stream picker: one-click play of the Best match not built; Spotlight buttons can sit under the compact header at one
   scroll position (task 023).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).
-- Windows / Linux ports untested on real machines; first GitHub release not published yet (repo
-  reliskdev/Stremio-Plus was private or empty, no `gh` CLI here). The stremio-web fork (`web/`) isn't on GitHub (task 043).
+- Windows / Linux ports untested on real machines. Repo is public (github.com/reliskdev/Stremio-Plus, remote `origin`);
+  v0.1.0 released with `PATH=/opt/homebrew/bin:$PATH node tools/package.js --release` (gh is logged in as reliskdev).
+  The stremio-web fork (`web/`) isn't on GitHub (task 043).
