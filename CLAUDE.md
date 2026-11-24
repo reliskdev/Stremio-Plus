@@ -90,7 +90,7 @@ install and commands.
 - Title → IMDb matching via Cinemeta search (`lib/match.js`); ~98% hit rate.
 - Subtitle sync (`lib/subsync/`, task 046): ffmpeg from the Stremio bundle (`STREMIO_PLUS_FFMPEG_DIR` overrides),
   network protocols only; `/api/subsync/*` answers loopback callers only. Masks and results cache in
-  `data/subsync/` (bump `VERSION` in speech.js / `ALIGN_VERSION` in index.js when the VAD or aligner changes).
+  `data/subsync/`, keyed by `?key=` (the UI sends videoHash or filename + size) else infoHash/fileIdx else URL; pruned (bump `VERSION` in speech.js / `ALIGN_VERSION` in index.js when the VAD or aligner changes).
   Tests: `cd addon && npm test`. Debug: open `/api/subsync/speech.png?url=<stream>&sub=<srt>`.
 - Recommendations use JustWatch's public GraphQL (`lib/justwatch.js`, `apis.justwatch.com/graphql`, no key, US):
   `streamingCharts` (weekly), `node(id){similarTitlesV2}`, `popularTitles` (filters/sort). Enum values must be passed

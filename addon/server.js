@@ -503,7 +503,7 @@ app.get('/api/subsync/speech', localOnly, async (req, res) => {
   const url = needUrl(req, res, 'url');
   if (!url) return;
   try {
-    res.json(await subsync.getSpeech(url));
+    res.json(await subsync.getSpeech(url, req.query.key));
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
@@ -513,7 +513,7 @@ app.get('/api/subsync/speech.png', localOnly, async (req, res) => {
   const url = needUrl(req, res, 'url');
   if (!url) return;
   try {
-    const speech = await subsync.getSpeech(url);
+    const speech = await subsync.getSpeech(url, req.query.key);
     let cues = null, aligned = null, title = `speech · ${speech.windows.length} windows · ${speech.duration}s`;
     if (typeof req.query.sub === 'string' && subsync.isHttp(req.query.sub)) {
       cues = await subsync.fetchSubtitle(req.query.sub);
@@ -528,12 +528,14 @@ app.get('/api/subsync/speech.png', localOnly, async (req, res) => {
 });
 
 // → { offset, scale, score, scoreBefore, margin, confident, reason, retimedUrl? }
+// Optional ?key= identifies the video independently of the URL (videoHash / filename + size), so links that
+// carry a session token still hit the cache.
 app.get('/api/subsync/align', localOnly, async (req, res) => {
   const url = needUrl(req, res, 'url');
   const sub = url && needUrl(req, res, 'sub');
   if (!url || !sub) return;
   try {
-    const r = await subsync.syncSubtitle(url, sub);
+    const r = await subsync.syncSubtitle(url, sub, req.query.key);
     res.json(r.retimed ? { ...r, retimedUrl: `${baseUrl(req)}/api/subsync/retimed/${r.id}.srt` } : r);
   } catch (e) {
     res.status(502).json({ error: e.message });
@@ -581,6 +583,7 @@ ui.listen(UI_PORT, '127.0.0.1', () => console.log(`   Stremio UI: http://127.0.0
 
 app.listen(PORT, () => {
   warmImdbEpisodes();
+  subsync.prune();
   console.log(`🍅 Rotten Tomatoes Picks running`);
   console.log(`   Configure:  http://127.0.0.1:${PORT}/configure`);
   console.log(`   Manifest:   http://127.0.0.1:${PORT}/manifest.json`);

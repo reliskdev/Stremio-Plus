@@ -54,3 +54,29 @@ test('SRT round trip', () => {
   const vtt = parseSubtitles('WEBVTT\n\n00:01.500 --> 00:03.000\nHi\n\n1:00:00.000 --> 1:00:01.000 align:start\nYo\n');
   assert.deepEqual(vtt.map((c) => [c.start, c.end]), [[1.5, 3], [3600, 3601]]);
 });
+
+test('cache keys: video key beats the URL, torrents key by infoHash/fileIdx', () => {
+  const { streamKey } = require('../lib/subsync/speech');
+  const a = streamKey('https://x.debrid.example/d/TOKEN1/movie.mkv', 'hash:8e245d9679d31e12:1234');
+  const b = streamKey('https://y.debrid.example/d/TOKEN2/movie.mkv', 'hash:8e245d9679d31e12:1234');
+  assert.equal(a, b);
+  assert.notEqual(streamKey('https://x/d/TOKEN1/m.mkv'), streamKey('https://x/d/TOKEN2/m.mkv'));
+  assert.equal(streamKey('http://127.0.0.1:11470/08ADA5A7A6183AAE1E09D831DF6748D566095A10/5?tr=x'), '08ada5a7a6183aae1e09d831df6748d566095a10-5');
+  // Junk keys are ignored rather than trusted as file names.
+  assert.equal(streamKey('https://x/a', '../../etc'), streamKey('https://x/a'));
+});
+
+test('prune drops stale and excess cache files', () => {
+  const os = require('os');
+  const speech = require('../lib/subsync/speech');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'subsync-'));
+  const { prune } = speech._withDir(dir);
+  const old = path.join(dir, 'old.json');
+  fs.writeFileSync(old, '{}');
+  const t = new Date(Date.now() - 100 * 24 * 3600 * 1000);
+  fs.utimesSync(old, t, t);
+  fs.writeFileSync(path.join(dir, 'new.json'), '{}');
+  assert.equal(prune(), 1);
+  assert.deepEqual(fs.readdirSync(dir), ['new.json']);
+  fs.rmSync(dir, { recursive: true });
+});

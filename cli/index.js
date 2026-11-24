@@ -131,11 +131,16 @@ const vanilla = async () => {
 const patch = async () => {
     requireStremio();
     const running = platform.procs();
-    console.log(await patcher.patch());
+    const result = await patcher.patch();
+    console.log(result);
     writeConfig({ patch: true });
-    if (running.length) {
+    // launch() would only focus a patched window (it looks "already modded"), so quit and reopen here. Nothing to
+    // reload when the patch and bundled chrome were already current.
+    if (running.length && result !== 'already patched') {
         console.log('restarting Stremio to load the patch…');
-        await launch();
+        await start({ quiet: true });
+        await platform.quit(running.map((p) => p.pid));
+        platform.openPatched();
     }
 };
 

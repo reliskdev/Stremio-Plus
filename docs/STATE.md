@@ -34,7 +34,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - `/api/rt/:imdb/episode/:s/:e`: episode IMDb rating + RT Tomatometer.
 - `/api/subsync/*` (local callers only, task 046): stream URL → speech mask (Stremio's ffmpeg, 3 × 3 min windows,
   pure-JS VAD, cached in `data/subsync/`), debug PNG timeline, align a subtitle (offset + framerate, score, margin),
-  retimed SRT. Tests: `npm test` in addon/ (Tears of Steel fixture).
+  retimed SRT. Optional `?key=` (videoHash / filename + size) keys the cache across expiring links; torrent windows
+  decode one at a time; cache pruned (90 days unused, 600 files). Tests: `npm test` in addon/ (Tears of Steel fixture).
 - `/api/rt/:imdb`: RT details for any title (known match or URL-slug guess with title sanity check).
 - `/api/seriesgraph/:imdb`: SeriesGraph per-episode IMDb ratings + community scores (TMDB id via Cinemeta), cached 12 h.
 - `/api/home/*` (JustWatch, US): services + icons, service pages, weekly charts, similar-title picks (steered by `liked` / `avoid` thumbs), filtered browse for the Genres page.
@@ -120,7 +121,6 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Subtitle sync (task 046): milestone 4 (auto-pick + auto-sync the best addon subtitle) and 5 (addon `subtitles`
   resource) of plans/008 B; VAD treats music with vocals / credits as speech (Silero upgrade); untested on a cold
   torrent and on Windows/Linux; embedded tracks not offered.
-- `stremio-plus patch` didn't actually restart a running Stremio after updating the dylib (task 045).
 - Patch follow-ups (task 044): Windows patch (binary URL swap in stremio-shell-ng.exe, no proxy there); release v0.2.0 after the
   user has lived with it.
 - Recommendations: country fixed to US; taste refreshes on Board mount only; not yet checked with the real library (task 025).

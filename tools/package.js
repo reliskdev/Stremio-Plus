@@ -39,7 +39,7 @@ if (process.platform === 'darwin') {
 
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(STAGE, { recursive: true });
-const ADDON_SKIP = new Set(['node_modules', 'data']);
+const ADDON_SKIP = new Set(['node_modules', 'data', 'test']);
 copy('addon', 'addon', (src) => !ADDON_SKIP.has(path.relative(path.join(P.ROOT, 'addon'), src).split(path.sep)[0]));
 copy('cli');
 copy('bin');

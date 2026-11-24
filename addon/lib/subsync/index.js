@@ -3,7 +3,8 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { getSpeech, streamKey, DIR } = require('./speech');
+const speech = require('./speech');
+const { getSpeech, streamKey, readCache, writeCache, prune } = speech;
 const { align } = require('./align');
 const { parseSubtitles, retime, toSrt } = require('./subs');
 
@@ -22,31 +23,32 @@ async function fetchSubtitle(url) {
   return cues;
 }
 
-const syncId = (url, sub) => `${streamKey(url)}-${crypto.createHash('sha1').update(sub).digest('hex').slice(0, 16)}`;
-const resultFile = (id) => path.join(DIR, `${id}.align.json`);
-const retimedFile = (id) => path.join(DIR, `${id}.srt`);
+const syncId = (url, sub, videoKey) => `${streamKey(url, videoKey)}-${crypto.createHash('sha1').update(sub).digest('hex').slice(0, 16)}`;
+const resultFile = (id) => path.join(speech.DIR, `${id}.align.json`);
+const retimedFile = (id) => path.join(speech.DIR, `${id}.srt`);
 
 const inflight = new Map();
 
-async function syncSubtitle(url, sub) {
-  const id = syncId(url, sub);
+async function syncSubtitle(url, sub, videoKey) {
+  const id = syncId(url, sub, videoKey);
   try {
-    const cached = JSON.parse(fs.readFileSync(resultFile(id), 'utf8'));
-    if (cached.version === ALIGN_VERSION) return { ...cached, cached: true };
+    const cached = JSON.parse(readCache(resultFile(id)));
+    if (cached.version === ALIGN_VERSION) {
+      if (cached.retimed) readCache(retimedFile(id)); // keep the SRT as fresh as its result; throws if pruned
+      return { ...cached, cached: true };
+    }
   } catch { /* not cached */ }
   if (!inflight.has(id)) {
     inflight.set(id, (async () => {
-      const [cues, speech] = await Promise.all([fetchSubtitle(sub), getSpeech(url)]);
+      const [cues, speech] = await Promise.all([fetchSubtitle(sub), getSpeech(url, videoKey)]);
       const t0 = Date.now();
       const r = align(cues, speech);
       const result = { version: ALIGN_VERSION, id, ...r, alignMs: Date.now() - t0, speechMs: speech.ms };
       if (r.ok && r.confident && r.scale !== 1) {
-        fs.mkdirSync(DIR, { recursive: true });
-        fs.writeFileSync(retimedFile(id), toSrt(retime(cues, r.offset, r.scale)));
+        writeCache(retimedFile(id), toSrt(retime(cues, r.offset, r.scale)));
         result.retimed = true;
       }
-      fs.mkdirSync(DIR, { recursive: true });
-      fs.writeFileSync(resultFile(id), JSON.stringify(result));
+      writeCache(resultFile(id), JSON.stringify(result));
       return result;
     })().finally(() => inflight.delete(id)));
   }
@@ -58,4 +60,4 @@ function readRetimed(id) {
   try { return fs.readFileSync(retimedFile(id), 'utf8'); } catch { return null; }
 }
 
-module.exports = { syncSubtitle, readRetimed, fetchSubtitle, isHttp, getSpeech };
+module.exports = { syncSubtitle, readRetimed, fetchSubtitle, isHttp, getSpeech, prune };
