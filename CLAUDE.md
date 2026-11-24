@@ -10,6 +10,9 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
 
 ## How it fits together
 - Stremio.app is never modified. `bin/stremio-plus launch` runs it with `--webui-url=http://127.0.0.1:7011/`.
+- `shell/chrome.m`: dylib injected via `DYLD_INSERT_LIBRARIES` (`open --env`, Stremio allows it) for the transparent
+  title bar; the web UI talks to it through the `stremioPlusChrome` WKScriptMessageHandler (`src/mods/macChrome.ts`).
+  `apply`/`launch` rebuild it when the source changes. Can't be tested in the headless UI test.
 - `addon/server.js` is one Node process: Stremio addon on :7010 and static host for `web/build` on :7011.
 - The modded UI talks to the addon over HTTP: `GET :7010/api/rt/:imdb?type=&name=&year=` returns RT details
   (scores, consensus, synopsis, cast, photos, direct mp4 trailer). Base URL comes from the installed addon's

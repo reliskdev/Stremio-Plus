@@ -6,3 +6,4 @@ addon/data/
 tools/ui-test/shots/
 tools/ui-test/.profile/
 .DS_Store
+shell/build/

@@ -13,6 +13,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   when Stremio is opened normally (Dock/Spotlight), quits and reopens it with `--webui-url` within ~1s.
   `vanilla` pauses this until the next `launch`; `disable` removes it. Log: `addon/data/agent.log`.
 
+- Window chrome dylib (`shell/chrome.m`, built to `shell/build/` by the CLI) is injected with `DYLD_INSERT_LIBRARIES`
+  on every modded launch: no title bar, traffic lights inside the nav bar.
+
 ## Features
 ### Addon (`addon/`), also works in stock Stremio
 - Catalogs: RT · Spotlight (curated, always on), Popular / Certified Fresh / Critics & Audiences Agree /
@@ -39,6 +42,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent / colour scheme (Monochrome default: neutral greys app-wide; Stremio purple, red, tomato, emerald), addon server status, reset.
+- Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, centred in the nav bar where the
+  logo was; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
+  with the player controls. Web side: `src/mods/macChrome.ts`.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.
@@ -56,4 +62,5 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Restyle the addon configure page to DESIGN.md.
 - Consider showing RT scores in Search results and Library.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
+- Title bar: player and fullscreen behaviour not yet checked (task 022).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).
