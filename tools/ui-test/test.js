@@ -249,6 +249,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await clickText('Mods');
     await sleep(1500);
     await shot('18-settings-mods');
+    // Streams group (stream preferences)
+    await page.evaluate(() => document.querySelector('[data-row-id="mods-streamQuality"], #mods-streamQuality')?.scrollIntoView({ block: 'start' }) ?? [...document.querySelectorAll('div')].find((e) => e.textContent.trim() === 'Preferred quality')?.scrollIntoView({ block: 'center' }));
+    await sleep(800);
+    await shot('18b-settings-streams');
+    await clickText('1080p');
+    await clickText('10 GB');
+    await sleep(500);
+    console.log('saved prefs:', await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mods:settings') || '{}'); return JSON.stringify({ q: s.streamQuality, gb: s.streamMaxGb }); }));
+    await shot('18c-settings-streams-set');
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mods:settings') || '{}'); delete s.streamQuality; delete s.streamMaxGb; localStorage.setItem('mods:settings', JSON.stringify(s)); });
   }
 
   if (step === 'all' || step === 'motion') {

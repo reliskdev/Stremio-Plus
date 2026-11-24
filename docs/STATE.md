@@ -58,6 +58,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
   (quality, HDR, size, source/codec/audio/seeds/site, flags, release dimmed), addon errors as one dim line.
   Toggle in Settings → Mods.
+  Stream preferences (Settings → Mods → Streams, `src/mods/streams/prefs.ts`): preferred quality (Auto learns the most
+  played of the last 12 plays), max file size, audio language (flag emojis), avoid HDR. They steer Best match (after
+  Last used) and row order; nothing is hidden.
 - Preview panel (MetaPreview, Discover / Player drawer / guide): scroll-edge fades (top once scrolled, bottom while more
   below) instead of a hard clip; `src/mods/useScrollEdges.ts`.
   Actions: library/watched pair + full-width Show; no trailer button in Discover while the RT panel is on.
@@ -79,6 +82,6 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Restyle the addon configure page to DESIGN.md.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
 - Title bar: player and fullscreen behaviour not yet checked (task 022).
-- Stream picker: remember preferred quality; language preference (assumes English); Spotlight buttons can sit
-  under the compact header at one scroll position (task 023).
+- Stream picker: one-click play of the Best match not built; Spotlight buttons can sit under the compact header at one
+  scroll position (task 023).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).
