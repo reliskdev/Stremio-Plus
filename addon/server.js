@@ -446,16 +446,21 @@ app.get('/api/home/service/:service', async (req, res) => {
   }
 });
 
-// GET /api/home/similar?seeds=tt1:movie:Dune,tt2:series:Severance&exclude=tt3,tt4 → { forYou, because }
+// GET /api/home/similar?seeds=tt1:movie:Dune,tt2:series:Severance&exclude=tt3,tt4[&liked=tt1&avoid=tt5:movie:Cats] → { forYou, because }
+// Thumbs ratings from the modded UI: &liked=tt1,tt2 (those seeds weigh 1.5x) &avoid=tt3:movie:Name (titles similar
+// to these are pushed down).
+const parseSeeds = (q, max) => String(q || '').split(',').slice(0, max).map((s) => {
+  const [id, type, ...name] = s.split(':');
+  return { id, type: type === 'series' ? 'series' : 'movie', name: decodeURIComponent(name.join(':')) };
+}).filter((s) => /^tt\d+$/.test(s.id) && s.name);
 app.get('/api/home/similar', async (req, res) => {
-  const seeds = String(req.query.seeds || '').split(',').slice(0, 8).map((s) => {
-    const [id, type, ...name] = s.split(':');
-    return { id, type: type === 'series' ? 'series' : 'movie', name: decodeURIComponent(name.join(':')) };
-  }).filter((s) => /^tt\d+$/.test(s.id) && s.name);
+  const seeds = parseSeeds(req.query.seeds, 8);
+  const avoid = parseSeeds(req.query.avoid, 4);
+  const liked = new Set(String(req.query.liked || '').split(',').filter((x) => /^tt\d+$/.test(x)));
   const exclude = new Set(String(req.query.exclude || '').split(',').filter((x) => /^tt\d+$/.test(x)));
   try {
     res.setHeader('Cache-Control', 'no-cache'); // personal; JustWatch responses are cached server-side
-    const r = await jw.recommendations(seeds, exclude);
+    const r = await jw.recommendations(seeds, exclude, { liked, avoid });
     res.json({ forYou: popcorn.enrich(r.forYou), because: r.because.map((b) => ({ ...b, items: popcorn.enrich(b.items) })) });
   } catch (e) {
     res.status(502).json({ error: e.message });

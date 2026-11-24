@@ -558,9 +558,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.mouse.move(800, 300);
     await sleep(4500); // controls fade; the movie card stays
     await shot('51-upnext-movie-immersed');
+    // Thumbs (task 042): rate the movie, check storage, then Picked for you on the Board is seeded from it
+    await page.evaluate(() => localStorage.removeItem('mods:ratings'));
+    await page.evaluate(() => document.querySelector('[class*=up-next] [title="I liked it"]')?.click());
+    await sleep(500);
+    await shot('52-upnext-rated');
+    console.log('rate row:', await page.evaluate(() => document.querySelector('[class*=up-next] [class*=rate]')?.innerText));
+    console.log('stored:', await page.evaluate(() => localStorage.getItem('mods:ratings')));
     await clickText('Dismiss');
     await sleep(800);
     console.log('after dismiss, card shown:', await page.evaluate(() => !!document.querySelector('[class*=up-next]')));
+    await page.goto(UI + '#/', { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    console.log('board rows:', await page.evaluate(() => Array.from(document.querySelectorAll('[class*=header] [class*=title], h2')).map((e) => e.textContent.trim()).filter(Boolean).slice(0, 6).join(' | ')));
+    await shot('53-board-after-rating');
+    await page.evaluate(() => localStorage.removeItem('mods:ratings'));
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

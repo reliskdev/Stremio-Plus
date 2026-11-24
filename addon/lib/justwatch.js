@@ -135,12 +135,20 @@ async function similarTo(imdb, type, name, limit = 20) {
 
 // Personal picks. seeds: [{ id, type, name }] most important first.
 // Returns a blended "for you" list (titles similar to several seeds rank higher) and per-seed lists.
-async function recommendations(seeds, exclude = new Set()) {
-  const lists = await Promise.all(seeds.map((s) => similarTo(s.id, s.type, s.name).catch(() => [])));
-  const skip = new Set([...exclude, ...seeds.map((s) => s.id)]);
+async function recommendations(seeds, exclude = new Set(), { liked = new Set(), avoid = [] } = {}) {
+  const [lists, avoidLists] = await Promise.all([
+    Promise.all(seeds.map((s) => similarTo(s.id, s.type, s.name).catch(() => []))),
+    Promise.all(avoid.map((s) => similarTo(s.id, s.type, s.name).catch(() => []))),
+  ]);
+  const skip = new Set([...exclude, ...seeds.map((s) => s.id), ...avoid.map((s) => s.id)]);
+  // Thumbs down: titles close to something you disliked lose ground (more so the closer they are to it).
+  const penalty = new Map();
+  avoidLists.forEach((list) => list.forEach((it, rank) => {
+    penalty.set(it.id, (penalty.get(it.id) || 0) + 0.8 * (1 - rank / (list.length + 5)));
+  }));
   const scores = new Map();
   lists.forEach((list, si) => {
-    const seedWeight = 1 / (1 + si * 0.25);
+    const seedWeight = (liked.has(seeds[si].id) ? 1.5 : 1) / (1 + si * 0.25);
     list.forEach((it, rank) => {
       if (skip.has(it.id)) return;
       const cur = scores.get(it.id) || { it, score: 0 };
@@ -148,7 +156,8 @@ async function recommendations(seeds, exclude = new Set()) {
       scores.set(it.id, cur);
     });
   });
-  const forYou = [...scores.values()].sort((a, b) => b.score - a.score).map((x) => x.it).slice(0, 30);
+  scores.forEach((v, id) => { v.score -= penalty.get(id) || 0; });
+  const forYou = [...scores.values()].filter((x) => x.score > 0).sort((a, b) => b.score - a.score).map((x) => x.it).slice(0, 30);
   // Per-seed rows leave out what the "for you" row already shows up front, so rows don't repeat each other.
   const shown = new Set(forYou.slice(0, 10).map((it) => it.id));
   const because = seeds

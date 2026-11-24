@@ -27,7 +27,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - `/api/rt/:imdb/episode/:s/:e`: episode IMDb rating + RT Tomatometer.
 - `/api/rt/:imdb`: RT details for any title (known match or URL-slug guess with title sanity check).
 - `/api/seriesgraph/:imdb`: SeriesGraph per-episode IMDb ratings + community scores (TMDB id via Cinemeta), cached 12 h.
-- `/api/home/*` (JustWatch, US): services + icons, service pages, weekly charts, similar-title picks, filtered browse for the Genres page.
+- `/api/home/*` (JustWatch, US): services + icons, service pages, weekly charts, similar-title picks (steered by `liked` / `avoid` thumbs), filtered browse for the Genres page.
 - Configure page at :7010/configure (still in the older gradient-heavy style; not yet restyled).
 
 ### Modded UI (`web/`, branch `rt-mod`)
@@ -68,7 +68,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Up next card (`src/mods/UpNext.tsx`): episodes replace the stock next-video popup (same timing, focus, dismissal)
   with still, title, "Show · S1 E2" + IMDb rating; movies show a similar title not in your library (Tomatometer 75+
   preferred, `/api/home/similar`) in the credits window (6% of runtime, 2 to 8 min), staying up when the controls fade,
-  with Details / Dismiss. Live TV keeps the stock popup.
+  with Details / Dismiss; series finales get the same card. Live TV keeps the stock popup.
+  Footer: "Liked X?" thumbs up / down (show for episodes, the movie for movies), stored on this device
+  (`src/mods/ratings.ts`, `mods:ratings`). Picked for you: liked titles lead the seeds at 1.5x weight, disliked ones
+  are dropped and titles similar to them pushed down (`liked` / `avoid` params on `/api/home/similar`).
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
