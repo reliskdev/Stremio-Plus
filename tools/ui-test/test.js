@@ -409,6 +409,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.evaluate(() => { const c = document.querySelector('[class*=service-content]'); c.scrollTop = c.scrollHeight; });
     await sleep(1500);
     await shot('33-service-page-bottom');
+    // Back button (top-left chevron) returns to the Board
+    console.log('back button:', await page.evaluate(() => !!document.querySelector('[class*=service-container] [class*=back-button-container]')));
+    await page.evaluate(() => document.querySelector('[class*=service-container] [class*=back-button-container]')?.click());
+    await sleep(2500);
+    console.log('after back:', await page.evaluate(() => location.hash));
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
