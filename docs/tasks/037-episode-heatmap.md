@@ -40,3 +40,14 @@
 ## Follow-ups
 - Long-running shows could cap the rows (e.g. show 10 seasons + "Show all").
 - Could highlight the episode you're up to (library progress).
+
+## Addendum: SeriesGraph colours
+- User: "color them like seriesgraph". Overrides the monochrome assumption above (and DESIGN.md's accent-only colour
+  rule) for this grid.
+- Scale taken from seriesgraph.com's JS bundle (default IMDb buckets, rating rounded to one decimal): Absolute Cinema
+  9.7+ #1DA1F2, Awesome 9.0 #186A3B, Great 8.0 #28B463, Good 7.0 #F4D03F, Average 6.0 #F39C12, Bad 4.1 #E74C3C,
+  Garbage below #633974. Text black on light colours, white on dark (Absolute Cinema always white), as they do.
+- `EpisodeHeatmap.tsx`: `BUCKETS` + inline cell colours, bucket name in the tooltip; colour legend under the grid
+  (0.75rem tertiary text, small rounded swatches).
+- Verified: `test heatmap` shots 42/43 (Dexter's S6/S8 yellows and the 4.9 red finale, Breaking Bad's 9.7+ blue cells),
+  click still opens S2 E3.
