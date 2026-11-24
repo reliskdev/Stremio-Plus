@@ -61,6 +61,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, level with the search bar, same inset
   from the left edge as from the top; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
   with the player controls. Web side: `src/mods/macChrome.ts`.
+- Now Playing (needs the dylib; `src/mods/nowPlaying.ts` + `SPMedia` in `shell/chrome.m`): Control Center / media keys show
+  the episode still (else backdrop, else poster), title + "Show · S1 E2" (movies: year), duration and a moving position;
+  ±skip (Stremio's seek step) and scrubbing seek the player. Merged into the shell's own Now Playing (swizzled
+  `setNowPlayingInfo:`); play/pause/next stay the shell's. Cleared when the player closes.
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
@@ -90,6 +94,7 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Restyle the addon configure page to DESIGN.md.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
 - Title bar: player and fullscreen behaviour not yet checked (task 022).
+- Now Playing: Control Center widget and hardware media keys not checked by hand yet (task 040).
 - Stream picker: one-click play of the Best match not built; Spotlight buttons can sit under the compact header at one
   scroll position (task 023).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).

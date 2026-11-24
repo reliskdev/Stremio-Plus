@@ -8,8 +8,14 @@
 //     drag: [[x,y,w,h]...],           // window-drag areas (the nav bar)
 //     holes: [[x,y,w,h]...],          // interactive elements inside them
 //     hidden: bool }                  // hide the traffic lights (player with controls hidden)
+//
+// Now Playing: Stremio's shell already publishes a title, the show's logo and play/pause. The `stremioPlusMedia`
+// handler (web/src/mods/nowPlaying.ts) adds artwork, subtitle, duration/position/rate; a swizzled
+// -[MPNowPlayingInfoCenter setNowPlayingInfo:] merges them into whatever the shell sets. Skip and scrub commands go
+// back to the web UI as `stremio-plus-media` window events ({ action: 'skip' | 'seek', value: seconds }).
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
+#import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
 
 static const char kStateKey;
@@ -138,6 +144,152 @@ static BOOL inAny(NSArray<NSValue *> *list, NSPoint p) {
 }
 @end
 
+// ---- Now Playing -------------------------------------------------------------------------------------------------
+
+@interface SPMedia : NSObject <WKScriptMessageHandler>
+@property (weak) WKWebView *web;
+@property (assign) BOOL active, canSeek, paused, live;
+@property (copy) NSString *title, *subtitle, *artURL;
+@property (strong) MPMediaItemArtwork *artwork;
+@property (copy) NSString *loadedArtURL;
+@property (assign) double duration, position, rate, skip;
++ (instancetype)shared;
+- (NSDictionary *)merge:(NSDictionary *)info;
+@end
+
+static IMP sOrigSetInfo;
+static void spSetNowPlayingInfo(id self, SEL _cmd, NSDictionary *info) {
+    NSDictionary *merged = [[SPMedia shared] merge:info];
+    ((void (*)(id, SEL, NSDictionary *))sOrigSetInfo)(self, _cmd, merged);
+}
+
+@implementation SPMedia {
+    id _skipFwd, _skipBack, _scrub;
+}
++ (instancetype)shared {
+    static SPMedia *m;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ m = [SPMedia new]; });
+    return m;
+}
+
+- (NSDictionary *)merge:(NSDictionary *)info {
+    @synchronized (self) {
+        // Player closed (or not open yet): nothing is playing, so leave Control Center empty rather than showing
+        // a stale title the shell keeps around after the player unmounts.
+        if (!self.active) return nil;
+        NSMutableDictionary *d = info ? [info mutableCopy] : [NSMutableDictionary dictionary];
+        if (self.title.length) d[MPMediaItemPropertyTitle] = self.title;
+        if (self.subtitle.length) d[MPMediaItemPropertyArtist] = self.subtitle;
+        else [d removeObjectForKey:MPMediaItemPropertyArtist];
+        if (self.artwork) d[MPMediaItemPropertyArtwork] = self.artwork;
+        d[MPNowPlayingInfoPropertyMediaType] = @(MPNowPlayingInfoMediaTypeVideo);
+        d[MPNowPlayingInfoPropertyIsLiveStream] = @(self.live);
+        d[MPNowPlayingInfoPropertyDefaultPlaybackRate] = @1.0;
+        d[MPNowPlayingInfoPropertyPlaybackRate] = @(self.paused ? 0.0 : self.rate);
+        if (self.canSeek && self.duration > 0) {
+            d[MPMediaItemPropertyPlaybackDuration] = @(self.duration);
+            d[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(self.position);
+        } else {
+            [d removeObjectsForKeys:@[MPMediaItemPropertyPlaybackDuration, MPNowPlayingInfoPropertyElapsedPlaybackTime]];
+        }
+        return d;
+    }
+}
+
+- (void)send:(NSString *)action value:(double)value {
+    WKWebView *web = self.web;
+    if (!web) return;
+    NSString *js = [NSString stringWithFormat:
+        @"window.dispatchEvent(new CustomEvent('stremio-plus-media',{detail:{action:'%@',value:%f}}))", action, value];
+    dispatch_async(dispatch_get_main_queue(), ^{ [web evaluateJavaScript:js completionHandler:nil]; });
+}
+
+- (void)updateCommands {
+    MPRemoteCommandCenter *cc = [MPRemoteCommandCenter sharedCommandCenter];
+    if (!_skipFwd) {
+        __weak SPMedia *weakSelf = self;
+        _skipFwd = [cc.skipForwardCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *e) {
+            [weakSelf send:@"skip" value:((MPSkipIntervalCommandEvent *)e).interval];
+            return MPRemoteCommandHandlerStatusSuccess;
+        }];
+        _skipBack = [cc.skipBackwardCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *e) {
+            [weakSelf send:@"skip" value:-((MPSkipIntervalCommandEvent *)e).interval];
+            return MPRemoteCommandHandlerStatusSuccess;
+        }];
+        _scrub = [cc.changePlaybackPositionCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *e) {
+            [weakSelf send:@"seek" value:((MPChangePlaybackPositionCommandEvent *)e).positionTime];
+            return MPRemoteCommandHandlerStatusSuccess;
+        }];
+    }
+    BOOL on = self.active && self.canSeek;
+    NSArray *intervals = @[@(self.skip > 0 ? self.skip : 10)];
+    if (![cc.skipForwardCommand.preferredIntervals isEqual:intervals]) {
+        cc.skipForwardCommand.preferredIntervals = intervals;
+        cc.skipBackwardCommand.preferredIntervals = intervals;
+    }
+    cc.skipForwardCommand.enabled = on;
+    cc.skipBackwardCommand.enabled = on;
+    cc.changePlaybackPositionCommand.enabled = on;
+}
+
+- (void)loadArtwork {
+    NSString *url = self.artURL;
+    if ([url isEqual:self.loadedArtURL]) return;
+    self.loadedArtURL = url;
+    self.artwork = nil;
+    NSURL *u = url.length ? [NSURL URLWithString:url] : nil;
+    if (!u) return;
+    [[[NSURLSession sharedSession] dataTaskWithURL:u completionHandler:^(NSData *data, NSURLResponse *r, NSError *err) {
+        NSImage *img = data ? [[NSImage alloc] initWithData:data] : nil;
+        if (!img) return;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (![self.loadedArtURL isEqual:url]) return;
+            self.artwork = [[MPMediaItemArtwork alloc] initWithBoundsSize:img.size
+                                                           requestHandler:^NSImage *(CGSize size) { return img; }];
+            [self publish];
+        });
+    }] resume];
+}
+
+- (void)publish {
+    MPNowPlayingInfoCenter *c = [MPNowPlayingInfoCenter defaultCenter];
+    c.nowPlayingInfo = c.nowPlayingInfo; // goes through the swizzle, which merges our keys
+    c.playbackState = !self.active ? MPNowPlayingPlaybackStateStopped
+        : self.paused ? MPNowPlayingPlaybackStatePaused : MPNowPlayingPlaybackStatePlaying;
+}
+
+- (void)userContentController:(WKUserContentController *)ucc didReceiveScriptMessage:(WKScriptMessage *)msg {
+    NSDictionary *b = [msg.body isKindOfClass:[NSDictionary class]] ? msg.body : nil;
+    if (!b) return;
+    if (msg.webView) self.web = msg.webView;
+    NSString *(^str)(id) = ^NSString *(id v) { return [v isKindOfClass:[NSString class]] ? v : nil; };
+    @synchronized (self) {
+        self.active = [b[@"active"] boolValue];
+        if (self.active) {
+            self.title = str(b[@"title"]);
+            self.subtitle = str(b[@"subtitle"]);
+            self.artURL = str(b[@"artwork"]);
+            self.duration = [b[@"duration"] doubleValue];
+            self.position = [b[@"position"] doubleValue];
+            self.rate = [b[@"rate"] doubleValue] ?: 1.0;
+            self.paused = [b[@"paused"] boolValue];
+            self.canSeek = [b[@"canSeek"] boolValue];
+            self.live = [b[@"live"] boolValue];
+            self.skip = [b[@"skip"] doubleValue];
+        }
+    }
+    if (self.active) [self loadArtwork];
+    [self updateCommands];
+    [self publish];
+}
+@end
+
+static void installNowPlaying(void) {
+    Method m = class_getInstanceMethod([MPNowPlayingInfoCenter class], @selector(setNowPlayingInfo:));
+    if (m && !sOrigSetInfo) sOrigSetInfo = method_setImplementation(m, (IMP)spSetNowPlayingInfo);
+}
+
 static WKWebView *findWebView(NSView *v) {
     if ([v isKindOfClass:[WKWebView class]]) return (WKWebView *)v;
     for (NSView *s in v.subviews) {
@@ -180,6 +332,8 @@ static void configure(NSWindow *w) {
 
     WKUserContentController *ucc = web.configuration.userContentController;
     [ucc addScriptMessageHandler:state name:@"stremioPlusChrome"];
+    [ucc addScriptMessageHandler:[SPMedia shared] name:@"stremioPlusMedia"];
+    [SPMedia shared].web = web;
     [ucc addUserScript:[[WKUserScript alloc] initWithSource:kFlagJS
                                               injectionTime:WKUserScriptInjectionTimeAtDocumentStart
                                            forMainFrameOnly:YES]];
@@ -201,6 +355,7 @@ static void configure(NSWindow *w) {
 __attribute__((constructor)) static void stremioPlusChromeInit(void) {
     // Don't leak into child processes (node server, ffmpeg).
     unsetenv("DYLD_INSERT_LIBRARIES");
+    installNowPlaying();
     dispatch_async(dispatch_get_main_queue(), ^{
         [NSTimer scheduledTimerWithTimeInterval:0.25 repeats:YES block:^(NSTimer *t) {
             for (NSWindow *w in [NSApp windows]) configure(w);

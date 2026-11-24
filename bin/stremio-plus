@@ -47,7 +47,7 @@ build() {
 build_chrome() {
   if [[ ! -f "$CHROME_LIB" || "$CHROME_SRC" -nt "$CHROME_LIB" ]]; then
     mkdir -p "$(dirname "$CHROME_LIB")"
-    xcrun clang -dynamiclib -fobjc-arc -arch arm64 -mmacosx-version-min=11.0 -framework Cocoa -framework WebKit \
+    xcrun clang -dynamiclib -fobjc-arc -arch arm64 -mmacosx-version-min=11.0 -framework Cocoa -framework WebKit -framework MediaPlayer \
       -o "$CHROME_LIB" "$CHROME_SRC" && codesign -f -s - "$CHROME_LIB" >/dev/null 2>&1 \
       || { echo "chrome dylib build failed; launching without it" >&2; rm -f "$CHROME_LIB"; }
   fi
