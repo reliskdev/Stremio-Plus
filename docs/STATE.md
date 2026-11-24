@@ -45,6 +45,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, centred in the nav bar where the
   logo was; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
   with the player controls. Web side: `src/mods/macChrome.ts`.
+- Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
   (quality, HDR, size, source/codec/audio/seeds/site, flags, release dimmed), addon errors as one dim line.

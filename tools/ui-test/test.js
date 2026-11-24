@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes|mods|motion]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -143,6 +143,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.goto(UI + '#/detail/series/tt0773262/' + encodeURIComponent('tt0773262:1:3'), { waitUntil: 'networkidle2' });
     await sleep(8000);
     await shot('13-episode-imdb');
+  }
+
+  if (step === 'all' || step === 'player') {
+    // Player header scrim over a bright frame: open the player for an episode, paint the frame light grey, show the overlay
+    const stream = Buffer.from(require('zlib').deflateSync(JSON.stringify({ url: 'http://127.0.0.1:7010/none.mp4' }))).toString('base64');
+    await page.goto(UI + '#/player/' + encodeURIComponent(stream) + '/' + encodeURIComponent('https://v3-cinemeta.strem.io/manifest.json') + '/' + encodeURIComponent('https://v3-cinemeta.strem.io/manifest.json') + '/series/tt2861424/' + encodeURIComponent('tt2861424:7:7'), { waitUntil: 'networkidle2' });
+    await sleep(6000);
+    await page.addStyleTag({ content: '[class*="player-container"]{background:#d6d6d6!important} [class*="background-layer"],[class*="error-layer"],[class*="buffering-layer"],video{display:none!important}' });
+    await page.mouse.move(800, 400); await sleep(150); await page.mouse.move(820, 420); await sleep(600);
+    await shot('22-player-header');
   }
 
   if (step === 'all' || step === 'tooltip') {

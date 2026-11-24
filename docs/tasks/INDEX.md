@@ -25,3 +25,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [021 · Dropdown mirrored motion](021-dropdown-mirror-motion.md): open = corners square then sheet unfolds; close is the exact reverse (iOS sheet curve, 300ms)
 - [022 · Transparent title bar](022-transparent-titlebar.md): injected dylib hides the title bar; larger traffic lights in a compact, draggable nav bar
 - [023 · Better stream picker](023-stream-picker.md): streams grouped by quality with pills, best match, readable rows, errors folded away; window-shrink fix
+- [024 · Player header scrim](024-player-header-scrim.md): darker, taller eased scrim behind the player's top bar so the title reads over bright frames
