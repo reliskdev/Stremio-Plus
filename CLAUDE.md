@@ -28,7 +28,7 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   `no-cache`, so a rebuild + Stremio reload (Cmd+R or `apply`) picks it up.
 - Typecheck: `cd web && npx tsc --noEmit -p .`
 - Verify visually with `bin/stremio-plus test <step>` and read the PNGs in `tools/ui-test/shots/`
-  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion). The test browser profile lives in
+  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion, recs). The test browser profile lives in
   `tools/ui-test/.profile` (guest account with the addon installed).
 
 ## Design rules (from PRODUCT.md / DESIGN.md, user feedback)
@@ -48,9 +48,13 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   `affiliates:netflix`, `genres:horror`). TV has no certified flag in browse data.
   Trailers: `link.theplatform.com/s/NGweTC/media/<publicId>?formats=MPEG4` redirects to the mp4.
 - Title → IMDb matching via Cinemeta search (`lib/match.js`); ~98% hit rate.
+- Recommendations use JustWatch's public GraphQL (`lib/justwatch.js`, `apis.justwatch.com/graphql`, no key, US):
+  `streamingCharts` (weekly), `node(id){similarTitlesV2}`, `popularTitles` (filters/sort). Enum values must be passed
+  as variables, not inline strings. Introspection is disabled.
 
 ## Environment gotchas
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
+- Stremio's global CSS gives every div `overflow: hidden`; containers holding a MultiselectMenu need `overflow: visible`.
 - `stremio://` links always open as https in Stremio, so the local addon is installed by pasting the
   `http://127.0.0.1:7010/<config>/manifest.json` URL into Stremio's addon search.

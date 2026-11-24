@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -288,6 +288,58 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.mouse.move(800, 500); await sleep(1500);
     await page.mouse.move(202, 926); await sleep(100);
     console.log('fresh hover after a pause @100ms:', await tip());
+  }
+
+  if (step === 'all' || step === 'recs') {
+    // Board recommendations. The guest profile's library is empty, so seed taste the way useTaste caches it.
+    await page.goto(UI + '#/', { waitUntil: 'networkidle2' });
+    await page.evaluate(() => localStorage.removeItem('mods:taste'));
+    await page.reload({ waitUntil: 'networkidle2' });
+    await sleep(5000);
+    console.log('taste read from library:', await page.evaluate(() => localStorage.getItem('mods:taste')));
+    await page.evaluate(() => localStorage.setItem('mods:taste', JSON.stringify({
+      seeds: [{ id: 'tt15239678', type: 'movie', name: 'Dune: Part Two' }, { id: 'tt11280740', type: 'series', name: 'Severance' }],
+      exclude: ['tt15239678', 'tt11280740'], at: Date.now(),
+    })));
+    await page.reload({ waitUntil: 'networkidle2' });
+    await sleep(8000);
+    const rows = () => page.evaluate(() => [...document.querySelectorAll('[data-board-row]')].map((r) => r.getAttribute('data-board-row')).join(' | '));
+    console.log('rows:', await rows());
+    await shot('23-recs-board');
+    await page.evaluate(() => { const r = document.querySelector('[data-board-row="Picked for you"]'); r && r.scrollIntoView({ block: 'start' }); });
+    await sleep(1200);
+    await shot('24-recs-rows');
+    await page.evaluate(() => { const r = document.querySelector('[data-board-row^="Top this week on HBO"]'); r && r.scrollIntoView({ block: 'center' }); });
+    await sleep(1200);
+    await shot('25-recs-rows-2');
+    await page.evaluate(() => { const r = document.querySelector('[data-board-row^="Because you watched"]'); r && r.scrollIntoView({ block: 'center' }); });
+    await sleep(1200);
+    await shot('25b-recs-because');
+    await page.evaluate(() => { const a = document.querySelector('[data-board-row^="Because you watched"] a[href]'); a && a.click(); });
+    await sleep(2500);
+    console.log('card opened:', await page.evaluate(() => location.hash));
+    await page.goto(UI + '#/settings/mods', { waitUntil: 'networkidle2' });
+    await sleep(2000);
+    await page.evaluate(() => { const r = document.querySelector('[data-row-id=mods-services], #mods-services') || [...document.querySelectorAll('div')].find((d) => d.textContent.trim() === 'Your services'); r && r.scrollIntoView({ block: 'center' }); });
+    await sleep(600);
+    await shot('29-mods-home');
+    // Genres page
+    await page.goto(UI + '#/genres?genre=hrr', { waitUntil: 'networkidle2' });
+    await sleep(5000);
+    await shot('26-genres');
+    console.log('clicked service menu:', await clickText('All services'));
+    await sleep(1200);
+    console.log('menu:', await page.evaluate(() => { const d = [...document.querySelectorAll('[class*=dropdown]')].map((e) => { const r = e.getBoundingClientRect(); return `${e.className.slice(0,60)} ${Math.round(r.top)},${Math.round(r.height)} op=${getComputedStyle(e).opacity} vis=${getComputedStyle(e).visibility}`; }); return d.join(' || ') + ' top@=' + (document.elementFromPoint(340, 300)?.className || '') + ' clip=' + getComputedStyle(document.querySelector('[class*=dropdown]')).clipPath + ' parentOverflow=' + [...(function*(e){while(e){yield e; e=e.parentElement;}})(document.querySelector('[class*=dropdown]'))].slice(0,6).map(e=>e.className.slice(0,25)+':'+getComputedStyle(e).overflow+':'+getComputedStyle(e).zIndex).join(' > '); }));
+    await shot('27-genres-service-menu');
+    console.log('picked Netflix:', await clickText('Netflix'));
+    await sleep(4000);
+    console.log('url:', await page.evaluate(() => location.hash));
+    await shot('28-genres-netflix');
+    const count = () => page.evaluate(() => document.querySelectorAll('[class*=grid] [class*=meta-item-container]').length);
+    console.log('items before scroll:', await count());
+    await page.evaluate(() => { const c = document.querySelector('[class*=genres-content]'); c.scrollTop = c.scrollHeight; });
+    await sleep(4000);
+    console.log('items after scroll:', await count());
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

@@ -26,6 +26,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Posters with score badges (`/poster/tt….jpg`, sharp), toggleable.
 - `/api/rt/:imdb/episode/:s/:e`: episode IMDb rating + RT Tomatometer.
 - `/api/rt/:imdb`: RT details for any title (known match or URL-slug guess with title sanity check).
+- `/api/home/*` (JustWatch, US): weekly charts per service, similar-title picks, filtered browse for the Genres page.
 - Configure page at :7010/configure (still in the older gradient-heavy style; not yet restyled).
 
 ### Modded UI (`web/`, branch `rt-mod`)
@@ -38,6 +39,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Motion: house ease-out `@mods-ease` (`src/mods/motion.less`); animation plans and their status in `plans/`.
 - Tooltips (app-wide): first one after 0.3s, neighbours instant; compact pill in the dropdown surface colour (neutral in Monochrome), 0.3s hover delay, slide-in, no glow.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
+- Recommendations home (`src/mods/home/`, toggle `recsHome`, on): after Continue Watching, "Picked for you" (blend of
+  titles similar to your library, watched first), "Browse by genre" pills, then "Top this week on <service>" and
+  "Because you watched X" rows interleaved; addon rows below. Services picked in Settings → Mods → Home.
+- Genres page (`#/genres`, nav tab): genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
@@ -64,6 +69,7 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Old-style configure page (see above).
 
 ## Open follow-ups
+- Recommendations: country fixed to US; taste refreshes on Board mount only; not yet checked with the real library (task 025).
 - Restyle the addon configure page to DESIGN.md.
 - Consider showing RT scores in Search results and Library.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).

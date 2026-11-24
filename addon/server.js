@@ -8,6 +8,7 @@ const { getDetails } = require('./lib/details');
 const { enrichAll, getCinemeta } = require('./lib/enrich');
 const { rtEpisode } = require('./lib/episodes');
 const { imdbEpisodeRating, imdbSeriesRatings, warmImdbEpisodes } = require('./lib/imdb-episodes');
+const jw = require('./lib/justwatch');
 const pkg = require('./package.json');
 
 const PORT = process.env.PORT || 7010;
@@ -274,6 +275,52 @@ app.get('/api/rt/:imdb/episode/:season/:episode', async (req, res) => {
   ]);
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.json({ imdb, season, episode, imdbRating, rt });
+});
+
+// ---------- Recommendations home + Genres page (JustWatch, used by the modded UI) ----------
+app.get('/api/home/options', (req, res) => {
+  res.json({
+    services: Object.entries(jw.SERVICES).map(([id, s]) => ({ id, name: s.name })),
+    genres: Object.entries(jw.GENRES).map(([id, name]) => ({ id, name })),
+    sorts: Object.keys(jw.SORTS),
+  });
+});
+
+// GET /api/home/chart/netflix → { id, name, items } (top movies + shows this week)
+app.get('/api/home/chart/:service', async (req, res) => {
+  try {
+    const chart = await jw.weeklyChart(req.params.service);
+    if (!chart) return res.status(404).json({ error: 'unknown service' });
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json(chart);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// GET /api/home/similar?seeds=tt1:movie:Dune,tt2:series:Severance&exclude=tt3,tt4 → { forYou, because }
+app.get('/api/home/similar', async (req, res) => {
+  const seeds = String(req.query.seeds || '').split(',').slice(0, 8).map((s) => {
+    const [id, type, ...name] = s.split(':');
+    return { id, type: type === 'series' ? 'series' : 'movie', name: decodeURIComponent(name.join(':')) };
+  }).filter((s) => /^tt\d+$/.test(s.id) && s.name);
+  const exclude = new Set(String(req.query.exclude || '').split(',').filter((x) => /^tt\d+$/.test(x)));
+  try {
+    res.setHeader('Cache-Control', 'no-cache'); // personal; JustWatch responses are cached server-side
+    res.json(await jw.recommendations(seeds, exclude));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// GET /api/home/browse?genre=hrr&type=movie|series&service=netflix&sort=popular&after=cursor → { items, next }
+app.get('/api/home/browse', async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.json(await jw.browse(req.query));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
 });
 
 // ---------- Configure UI ----------
