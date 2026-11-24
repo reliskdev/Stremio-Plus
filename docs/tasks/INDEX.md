@@ -19,3 +19,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [015 · Monochrome](015-monochrome.md): Monochrome scheme (default accent) and halved top corners on the open dropdown; Mods page crash fixed
 - [016 · Dropdown polish](016-dropdown-polish.md): label keeps its far corners, matched open/close motion, unclipped shadow, saved accent → Monochrome
 - [017 · Dropdown close + spacing](017-dropdown-close-spacing.md): label stays squared until the sheet has folded away; roomier options
+- [018 · Monochrome tooltips](018-mono-tooltips.md): tooltips and the seek tooltip use the dropdown's neutral surface

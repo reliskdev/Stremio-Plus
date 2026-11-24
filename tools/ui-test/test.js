@@ -146,14 +146,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   if (step === 'all' || step === 'tooltip') {
-    // Hover tooltip on the Details action buttons (library + like)
+    // Hover tooltip on the Details action buttons (library + like), in the default (monochrome) scheme
     await page.goto(UI + '#/detail/series/tt11280740/' + encodeURIComponent('tt11280740:2:10'), { waitUntil: 'networkidle2' });
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('mods:settings') || '{}'); delete s.accent;
+      localStorage.setItem('mods:settings', JSON.stringify(s));
+    });
+    await page.reload({ waitUntil: 'networkidle2' });
     await sleep(6000);
     await page.mouse.move(202, 926);
     await sleep(150);
     await shot('14-tooltip-early');
     await sleep(700);
     await shot('15-tooltip');
+    console.log('tooltip:', await page.evaluate(() => {
+      const t = [...document.querySelectorAll('[class*=tooltip-container]')].find((e) => e.className.includes('active'));
+      return t ? getComputedStyle(t).backgroundColor + ' | ' + getComputedStyle(t).backdropFilter : 'none active';
+    }));
   }
 
   if (step === 'all' || step === 'episodes') {
