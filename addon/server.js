@@ -242,6 +242,62 @@ async function resolveRt(imdb, query) {
   return { type, mediaUrl, details: d };
 }
 
+// ---------- Card extras: scores, certified flags and short labels for the modded UI's card hover ----------
+// "Won 2 Oscars. 126 wins & 375 nominations total" → "Won 2 Oscars"; nominations only when nothing was won.
+function awardLabel(text) {
+  if (!text) return null;
+  const big = text.match(/(Won|Nominated for) (\d+) (Oscars?|Primetime Emmys?|Golden Globes?|BAFTA Film Awards?)/i);
+  if (big) {
+    const n = Number(big[2]);
+    const one = big[3].replace(/^Primetime /i, '').replace(/ Film Awards?$/i, '').replace(/s$/, ''); // Oscar, Emmy, Golden Globe, BAFTA
+    if (/^won/i.test(big[1])) return n === 1 ? `${one} winner` : `Won ${n} ${one}s`;
+    return `${one} nominee`;
+  }
+  const wins = Number(text.match(/(\d+) wins?/)?.[1] || 0);
+  const noms = Number(text.match(/(\d+) nominations?/)?.[1] || 0);
+  if (wins >= 10) return 'Award-winning';
+  if (noms >= 10) return 'Award-nominated';
+  return null;
+}
+
+function cardLabels({ tomato, tomatoCertified, reviews, popcorn, popcornCertified, awards }) {
+  const out = [];
+  const a = awardLabel(awards);
+  if (a) out.push(a);
+  if (tomatoCertified) out.push('Certified Fresh');
+  else if (tomato >= 90 && reviews >= 40) out.push('Critically acclaimed');
+  if (out.length < 2) {
+    if (popcornCertified && popcorn >= 90) out.push('Verified Hot');
+    else if (popcorn >= 90) out.push('Audience favourite');
+  }
+  return out.slice(0, 2);
+}
+
+// GET /api/card/tt123?type=movie&name=&year= → { tomato, tomatoCertified, popcorn, popcornCertified, labels }
+app.get('/api/card/:imdb', async (req, res) => {
+  const { imdb } = req.params;
+  if (!/^tt\d+$/.test(imdb)) return res.status(400).json({ error: 'bad id' });
+  const type = req.query.type === 'series' ? 'series' : 'movie';
+  popcorn.directStart();
+  try {
+    const [rt, cm] = await Promise.all([
+      resolveRt(imdb, { ...req.query, type }).catch(() => undefined), // undefined = lookup failed, null = not on RT
+      getCinemeta(type, imdb).catch(() => null),
+    ]);
+    const c = rt?.details?.scores?.critics || {}, a = rt?.details?.scores?.audience || {};
+    const card = {
+      tomato: c.score ?? null, tomatoCertified: !!c.certified, reviews: c.reviews ?? null,
+      popcorn: a.score ?? null, popcornCertified: !!a.certified,
+      awards: cm?.awards || null,
+    };
+    card.labels = cardLabels(card);
+    res.setHeader('Cache-Control', rt === undefined ? 'no-store' : 'public, max-age=3600');
+    res.json(card);
+  } finally {
+    popcorn.directEnd();
+  }
+});
+
 // ---------- Popcornmeter for JustWatch items (they only carry the Tomatometer) ----------
 // imdb → { p: score|null, at }. Unknown titles are looked up on RT in the background, a few at a time, so the
 // next load of a row has them; the card hover also asks /api/rt/:imdb directly for the one being looked at.

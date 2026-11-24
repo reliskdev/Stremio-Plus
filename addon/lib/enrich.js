@@ -14,7 +14,8 @@ async function getCinemeta(type, id) {
   if (mem.has(file)) return mem.get(file);
   try {
     const c = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (Date.now() - c.at < TTL) { mem.set(file, c.meta); return c.meta; }
+    // Entries cached before `awards` was kept are refetched once.
+    if (Date.now() - c.at < TTL && c.meta && 'awards' in c.meta) { mem.set(file, c.meta); return c.meta; }
   } catch {}
   const p = fetch(`https://v3-cinemeta.strem.io/meta/${type}/${id}.json`)
     .then((r) => (r.ok ? r.json() : {}))
@@ -32,6 +33,7 @@ async function getCinemeta(type, id) {
         imdbRating: m.imdbRating || null,
         year: m.year || m.releaseInfo || null,
         description: m.description || null,
+        awards: m.awards || null,
       };
       fs.writeFile(file, JSON.stringify({ at: Date.now(), meta: slim }), () => {});
       return slim;

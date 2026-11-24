@@ -144,7 +144,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   if (step === 'all' || step === 'details') {
-    await page.goto(UI + '#/detail/movie/tt45368240/tt45368240', { waitUntil: 'networkidle2' });
+    await page.goto(UI + '#/detail/movie/tt15239678/tt15239678', { waitUntil: 'networkidle2' });
     await sleep(8000);
     await shot('06-details');
   }
@@ -388,7 +388,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const box = await page.evaluate((i) => { const el = document.querySelectorAll('[class*=service-content] [class*=meta-item-container]')[i]; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, i);
       await page.mouse.move(box.x, box.y);
       await sleep(2500);
-      console.log(name, await page.evaluate((i) => document.querySelectorAll('[class*=service-content] [class*=meta-item-container]')[i].querySelector('[class*=mod-hover-meta]')?.innerText.replace(/\s+/g, ' '), i));
+      console.log(name, await page.evaluate((i) => document.querySelectorAll('[class*=service-content] [class*=meta-item-container]')[i].querySelector('[class*=mod-hover]')?.innerText.replace(/\s+/g, ' '), i));
       await shot(name);
     }
     await page.mouse.move(5, 500);

@@ -45,7 +45,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Service pages (`#/service/:id`, `ServicePage.tsx`): logo + name header, sideways-scrolling rows (top movies / shows
   this week, trending, popular movies / shows, new releases, top rated movies / shows), no See All.
 - Genres page (`#/genres`, nav tab): heading from the filters ("Trending on Netflix") + ranking note, genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
-- Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name, Tomatometer left and Popcornmeter right (JustWatch rows: popcorn from the addon's RT lookup, `data/popcorn.json`, or fetched on hover).
+- Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name, Tomatometer left and Popcornmeter right (certified icons for Certified Fresh / Verified Hot), and a labels line ("Won 2 Oscars · Certified Fresh", "Critically acclaimed", "Audience favourite") from `/api/card/:imdb`, fetched on hover; JustWatch rows also get popcorn from `data/popcorn.json`.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.
 - Settings → Mods: toggles (wide rows, hover trailers, clean grids, clean posters, RT panel),
   accent / colour scheme (Monochrome default: neutral greys app-wide; Stremio purple, red, tomato, emerald), addon server status, reset.
