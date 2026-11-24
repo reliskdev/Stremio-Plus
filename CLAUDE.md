@@ -88,6 +88,10 @@ install and commands.
 - SeriesGraph (`lib/seriesgraph.js`): public `seriesgraph.com/api/shows/:tmdb/season-ratings` and
   `/api/community-ratings/:tmdb/season-ratings`, keyed by TMDB id (Cinemeta's `moviedb_id`). User endpoints need login.
 - Title → IMDb matching via Cinemeta search (`lib/match.js`); ~98% hit rate.
+- Subtitle sync (`lib/subsync/`, task 046): ffmpeg from the Stremio bundle (`STREMIO_PLUS_FFMPEG_DIR` overrides),
+  network protocols only; `/api/subsync/*` answers loopback callers only. Masks and results cache in
+  `data/subsync/` (bump `VERSION` in speech.js / `ALIGN_VERSION` in index.js when the VAD or aligner changes).
+  Tests: `cd addon && npm test`. Debug: open `/api/subsync/speech.png?url=<stream>&sub=<srt>`.
 - Recommendations use JustWatch's public GraphQL (`lib/justwatch.js`, `apis.justwatch.com/graphql`, no key, US):
   `streamingCharts` (weekly), `node(id){similarTitlesV2}`, `popularTitles` (filters/sort). Enum values must be passed
   as variables, not inline strings. Introspection is disabled.
@@ -99,6 +103,8 @@ install and commands.
   paths as unverified until the user reports back.
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
+- macOS's filesystem is case-insensitive: `subSync.ts` next to `SubSync.tsx` makes `./subSync` resolve to the
+  component itself (webpack error). Give sibling modules distinct names.
 - The web build's TS target doesn't downlevel iterators: `[...map.entries()]` / `[...set]` silently become `[]`.
   Use `Array.from(...)`.
 - Stremio's global CSS gives every div `overflow: hidden`; containers holding a MultiselectMenu need `overflow: visible`.

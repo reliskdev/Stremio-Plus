@@ -78,3 +78,9 @@ density and don't score them as "bad"); licensing of any bundled VAD model.
 Suggested milestones: (1) server endpoint: stream URL → speech mask (+ debug PNG timeline); (2) offline aligner over
 SRT + mask with a test fixture (a known out-of-sync sub); (3) wire into the player for the selected sub only (manual
 "Sync subtitles" button); (4) automatic candidate ranking and selection; (5) addon `subtitles` resource.
+
+**Update (task 046):** milestones 1 to 3 built (see docs/tasks/046-subtitle-sync.md): `addon/lib/subsync/`,
+`/api/subsync/*`, pure-JS VAD (no Silero yet), FFT aligner over 7 framerate ratios, Tears of Steel fixture, and the
+manual "Sync subtitles" pill. Open: (4) automatic candidate ranking and selection: gather addon subtitles for the
+user's language, call `/api/subsync/align` per candidate (the speech mask is decoded once and cached, so each extra
+candidate costs ~50 ms), pick the best confident score, fall back to stock; (5) addon `subtitles` resource.

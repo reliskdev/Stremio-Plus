@@ -32,6 +32,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Metas enriched with RT details + Cinemeta (logo, background, runtime, genres, cast, mp4/YouTube trailers).
 - Posters with score badges (`/poster/tt….jpg`, sharp), toggleable.
 - `/api/rt/:imdb/episode/:s/:e`: episode IMDb rating + RT Tomatometer.
+- `/api/subsync/*` (local callers only, task 046): stream URL → speech mask (Stremio's ffmpeg, 3 × 3 min windows,
+  pure-JS VAD, cached in `data/subsync/`), debug PNG timeline, align a subtitle (offset + framerate, score, margin),
+  retimed SRT. Tests: `npm test` in addon/ (Tears of Steel fixture).
 - `/api/rt/:imdb`: RT details for any title (known match or URL-slug guess with title sanity check).
 - `/api/seriesgraph/:imdb`: SeriesGraph per-episode IMDb ratings + community scores (TMDB id via Cinemeta), cached 12 h.
 - `/api/home/*` (JustWatch, US): services + icons, service pages, weekly charts, similar-title picks (steered by `liked` / `avoid` thumbs), filtered browse for the Genres page.
@@ -84,6 +87,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   shell), Anime4K for animation titles, night mode (dynaudnorm), dialogue boost for 5.1. macOS app only: the shell
   whitelists mpv properties, so these go through the chrome dylib's `stremioPlusMpv` bridge to libmpv. G / H also
   shift embedded subtitles (any platform), value shown in the stock indicator. No smooth motion (task 045).
+- Sync subtitles (`src/mods/player/SubSync.tsx`): pill under DELAY in the player's subtitles menu for the selected
+  addon subtitle. Offset → stock delay; framerate mismatch → retimed "<lang> · Stremio+" track. "Synced (−2.9 s)"
+  with Undo; "Couldn't sync: <reason>" when not confident. Remembered per video + subtitle (server and device).
 - Player top bar: darker, taller eased scrim (0.8 to 0) behind the back button and title so they read over bright frames.
 - Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
   Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
@@ -110,7 +116,10 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 
 ## Open follow-ups
 - Player (task 045): smooth motion needs render-loop pacing in the dylib; embedded subtitle delay isn't remembered per
-  stream; dual subtitles and auto-synced subtitles (plans/008 B) can build on the mpv bridge.
+  stream; dual subtitles can build on the mpv bridge.
+- Subtitle sync (task 046): milestone 4 (auto-pick + auto-sync the best addon subtitle) and 5 (addon `subtitles`
+  resource) of plans/008 B; VAD treats music with vocals / credits as speech (Silero upgrade); untested on a cold
+  torrent and on Windows/Linux; embedded tracks not offered.
 - `stremio-plus patch` didn't actually restart a running Stremio after updating the dylib (task 045).
 - Patch follow-ups (task 044): Windows patch (binary URL swap in stremio-shell-ng.exe, no proxy there); release v0.2.0 after the
   user has lived with it.

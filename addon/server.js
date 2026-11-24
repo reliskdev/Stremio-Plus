@@ -479,6 +479,73 @@ app.get('/api/home/browse', async (req, res) => {
   }
 });
 
+// ---------- Subtitle sync (plans/008 B, task 046) ----------
+// Spawns ffmpeg on a URL the caller passes, so it only answers local callers (the addon port listens on all
+// interfaces). ffmpeg is also limited to network protocols (lib/subsync/ffmpeg.js).
+const subsync = require('./lib/subsync');
+const { align: alignCues } = require('./lib/subsync/align');
+const { parseSubtitles: parseSubs, retime: retimeCues } = require('./lib/subsync/subs');
+const { renderTimeline } = require('./lib/subsync/timeline');
+
+function localOnly(req, res, next) {
+  const ip = req.socket.remoteAddress || '';
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return next();
+  res.status(403).json({ error: 'subtitle sync is only available on this computer' });
+}
+function needUrl(req, res, name) {
+  const v = req.query[name];
+  if (typeof v === 'string' && subsync.isHttp(v)) return v;
+  res.status(400).json({ error: `?${name}= must be an http(s) URL` });
+  return null;
+}
+
+app.get('/api/subsync/speech', localOnly, async (req, res) => {
+  const url = needUrl(req, res, 'url');
+  if (!url) return;
+  try {
+    res.json(await subsync.getSpeech(url));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+app.get('/api/subsync/speech.png', localOnly, async (req, res) => {
+  const url = needUrl(req, res, 'url');
+  if (!url) return;
+  try {
+    const speech = await subsync.getSpeech(url);
+    let cues = null, aligned = null, title = `speech · ${speech.windows.length} windows · ${speech.duration}s`;
+    if (typeof req.query.sub === 'string' && subsync.isHttp(req.query.sub)) {
+      cues = await subsync.fetchSubtitle(req.query.sub);
+      const r = alignCues(cues, speech);
+      aligned = retimeCues(cues, r.offset, r.scale);
+      title = `offset ${r.offset >= 0 ? '+' : ''}${r.offset}s · scale ${r.scale.toFixed(4)} · score ${r.scoreBefore} → ${r.score} · margin ${r.margin}${r.confident ? '' : ` · not confident: ${r.reason}`}`;
+    }
+    res.type('png').send(await renderTimeline(speech, { cues, aligned, title }));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// → { offset, scale, score, scoreBefore, margin, confident, reason, retimedUrl? }
+app.get('/api/subsync/align', localOnly, async (req, res) => {
+  const url = needUrl(req, res, 'url');
+  const sub = url && needUrl(req, res, 'sub');
+  if (!url || !sub) return;
+  try {
+    const r = await subsync.syncSubtitle(url, sub);
+    res.json(r.retimed ? { ...r, retimedUrl: `${baseUrl(req)}/api/subsync/retimed/${r.id}.srt` } : r);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+app.get('/api/subsync/retimed/:id.srt', (req, res) => {
+  const srt = subsync.readRetimed(req.params.id);
+  if (!srt) return res.status(404).end();
+  res.type('application/x-subrip; charset=utf-8').send(srt);
+});
+
 // ---------- Configure UI ----------
 app.get('/api/options', (req, res) => {
   res.json({ catalogs: BASE_CATALOGS.map(({ id, type, name, blurb }) => ({ id, type, name, blurb })), services: SERVICES });
