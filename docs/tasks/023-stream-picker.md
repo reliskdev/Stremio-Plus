@@ -54,3 +54,14 @@
 - Language preference instead of the English assumption.
 - Board: the stock Spotlight's buttons can sit under the compact header when the scroll stops just before the
   "scrolled" cover kicks in (sentinel is `100% - nav size`).
+
+## Addendum: best match from a broken addon
+- User: "I'm clicking play on the best match one and it just closes." The best match was an `[AD+]` stream from the
+  Torrentio AllDebrid addon, which on that title also returned "Invalid AllDebrid ApiKey/Token!".
+- `organize.ts`: when an addon returns an error stream, its other streams get `addonError` (cached cleared): never
+  the best match (also not via last used), sorted to the end of each section, "Addon error" in the meta line.
+- Verified with esbuild against the Dune data plus a simulated AD addon with the error: best match from plain
+  Torrentio, AD rows last, `mixedCache` false. Real app: on a title where Torrentio AD sent no error (Rick and Morty
+  S9E7), AD streams still lead, as intended.
+- Not verified: that the AD stream itself fails. Checking it would need the user's AllDebrid key from Stremio's
+  storage, which was (rightly) blocked. Likely cause remains the invalid/expired key.
