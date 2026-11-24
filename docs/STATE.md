@@ -57,6 +57,7 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   Toggle in Settings → Mods.
 - Preview panel (MetaPreview, Discover / Player drawer / guide): scroll-edge fades (top once scrolled, bottom while more
   below) instead of a hard clip; `src/mods/useScrollEdges.ts`.
+  Actions: library/watched pair + full-width Show; no trailer button in Discover while the RT panel is on.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.

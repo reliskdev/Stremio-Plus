@@ -38,3 +38,12 @@
 ## Follow-ups
 - Same treatment for other hard-clipping scroll areas (Details stream list, Discover grid under the filter row from
   task 007) if wanted.
+
+## Addendum: action buttons fill the row
+- User: "These buttons need to be improved to fill the space. Remove the trailer button" (screenshot: trailer circle,
+  library/watched pair and a small Show pill spread across the row with gaps).
+- `routes/Discover/Discover.js` (`// [mods]`): no trailer button in the Discover preview while the RT panel is on
+  (the panel already plays the trailer); with the RT panel off it comes back so a trailer stays reachable.
+- `components/MetaPreview/Actions.less` (`// [mods]`): Show grows to fill the rest of the row (`flex: 1 1 auto`), so the
+  row is the library/watched pair plus one wide Show button.
+- Verified: `apply` compiled; `test discover` shot `05b`: pair on the left, Show filling the remaining width.
