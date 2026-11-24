@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes|mods]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|tooltip|episodes|mods|motion]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -225,6 +225,59 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await clickText('Mods');
     await sleep(1500);
     await shot('18-settings-mods');
+  }
+
+  if (step === 'all' || step === 'motion') {
+    // plans/001-007: dropdown curves + reopen + reduced motion, instant neighbour tooltips, lightbox, score fade
+    await page.goto(UI + '#/detail/series/tt0773262', { waitUntil: 'networkidle2' });
+    await sleep(8000);
+    const anim = () => page.evaluate(() => document.getAnimations().map((a) => `${a.animationName || a.transitionProperty}:${a.effect.getTiming().duration}ms:${a.effect.getTiming().easing}`).join(' , '));
+    await page.mouse.click(1380, 128); await sleep(30);
+    console.log('open:', await anim(), '| sheet timing:', await page.evaluate(() => { const m = document.querySelector('[data-side]'); return getComputedStyle(m).animationName + ' ' + getComputedStyle(m).animationTimingFunction; }));
+    await sleep(400);
+    // two real clicks on the label: the first closes, the second lands while the sheet is still folding away
+    const t0 = Date.now();
+    await page.mouse.click(1380, 128);
+    await page.mouse.click(1380, 128);
+    const gap = Date.now() - t0;
+    await sleep(400);
+    console.log(`reopen mid-close (2nd click ${gap}ms after the 1st):`, 'sheet open after 400ms: ' + await page.evaluate(() => !!document.querySelector('[data-side]')));
+    // and a single click still closes
+    await page.mouse.click(1380, 128); await sleep(400);
+    console.log('single click closes:', await page.evaluate(() => !document.querySelector('[data-side]')));
+    await page.mouse.click(1380, 128); await sleep(400);
+    await page.keyboard.press('Escape'); await sleep(500);
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    await page.mouse.click(1380, 128); await sleep(30);
+    console.log('reduced:', await anim());
+    await page.keyboard.press('Escape'); await sleep(500);
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+    // lightbox
+    await page.mouse.click(110, 943);
+    await sleep(60);
+    const opened = await page.evaluate(() => !!document.querySelector('[class*=lightbox]'));
+    const lbAnim = () => page.evaluate(() => document.getAnimations().filter((a) => /lightbox/.test(a.animationName)).map((a) => `${a.animationName}:${getComputedStyle(a.effect.target).animationDuration}:${getComputedStyle(a.effect.target).animationTimingFunction}`).join(' , '));
+    console.log('lightbox:', opened, await lbAnim());
+    await sleep(400);
+    await shot('19-lightbox');
+    await page.keyboard.press('Escape'); await sleep(60);
+    console.log('lightbox closing:', await lbAnim());
+    await sleep(300);
+    console.log('lightbox gone:', await page.evaluate(() => !document.querySelector('[class*=lightbox]')));
+    // tooltips: first waits, the neighbour is instant
+    await page.goto(UI + '#/detail/series/tt11280740/' + encodeURIComponent('tt11280740:2:10'), { waitUntil: 'networkidle2' });
+    await sleep(6000);
+    const tip = () => page.evaluate(() => { const t = [...document.querySelectorAll('[class*=tooltip-container]')].find((e) => e.className.includes('active'));
+      return t ? `${t.textContent} instant=${t.className.includes('instant')} opacity=${getComputedStyle(t).opacity}` : 'none'; });
+    await page.mouse.move(202, 926); await sleep(100);
+    console.log('first tooltip @100ms:', await tip());
+    await sleep(600);
+    console.log('first tooltip @700ms:', await tip());
+    await page.mouse.move(251, 926); await sleep(60);
+    console.log('neighbour @60ms:', await tip());
+    await page.mouse.move(800, 500); await sleep(1500);
+    await page.mouse.move(202, 926); await sleep(100);
+    console.log('fresh hover after a pause @100ms:', await tip());
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));
