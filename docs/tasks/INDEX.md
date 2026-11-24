@@ -33,3 +33,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [029 · Popcornmeter on card hover](029-popcorn-on-hover.md): hover strip shows tomato left, popcorn right; JustWatch rows get RT popcorn (addon lookup + on-hover fetch)
 - [030 · Certified icons and card labels](030-score-icons-labels.md): Certified Fresh / Verified Hot icons; card hover adds labels like "Won 2 Oscars · Certified Fresh"
 - [031 · Cast and directors only once on Details](031-details-cast-dedupe.md): hero drops the Cast / Directors rows when the RT panel (with Cast & crew) shows
+- [032 · Board posters like the service page](032-board-big-posters.md): home poster rows use 14.5rem posters with tight gaps and scroll sideways
