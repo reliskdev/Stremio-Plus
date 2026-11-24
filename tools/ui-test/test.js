@@ -374,6 +374,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('opened:', await page.evaluate(() => location.hash));
     console.log('sections:', await page.evaluate(() => [...document.querySelectorAll('[data-board-row]')].map((r) => `${r.getAttribute('data-board-row')} (${r.querySelectorAll('[class*=meta-item-container]').length})`).join(' | ')));
     await shot('31-service-page');
+    // Hover strip: Tomatometer left, Popcornmeter right (first card, then one further along that may need a lookup)
+    for (const [i, name] of [[0, '31b-hover-scores'], [5, '31c-hover-scores-lazy']]) {
+      const box = await page.evaluate((i) => { const el = document.querySelectorAll('[class*=service-content] [class*=meta-item-container]')[i]; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, i);
+      await page.mouse.move(box.x, box.y);
+      await sleep(2500);
+      console.log(name, await page.evaluate((i) => document.querySelectorAll('[class*=service-content] [class*=meta-item-container]')[i].querySelector('[class*=mod-hover-meta]')?.innerText.replace(/\s+/g, ' '), i));
+      await shot(name);
+    }
+    await page.mouse.move(5, 500);
     await page.evaluate(() => { const t = document.querySelector('[class*=service-content] [class*=track]'); t.scrollLeft = 900; });
     await sleep(800);
     await shot('32-service-row-scrolled');

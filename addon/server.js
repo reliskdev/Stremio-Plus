@@ -238,8 +238,48 @@ async function resolveRt(imdb, query) {
     const n = (s) => String(s).toLowerCase().replace(/\(\d{4}\)/, '').replace(/[^a-z0-9]/g, '');
     if (!n(d.title).includes(n(guessedName)) && !n(guessedName).includes(n(d.title))) return null;
   }
+  popcorn.remember(imdb, d.scores?.audience?.score ?? null, d.scores?.critics?.score ?? null);
   return { type, mediaUrl, details: d };
 }
+
+// ---------- Popcornmeter for JustWatch items (they only carry the Tomatometer) ----------
+// imdb → { p: score|null, at }. Unknown titles are looked up on RT in the background, a few at a time, so the
+// next load of a row has them; the card hover also asks /api/rt/:imdb directly for the one being looked at.
+const popcorn = (() => {
+  const fs = require('fs');
+  const FILE = path.join(__dirname, 'data', 'popcorn.json');
+  const MISS_RETRY = 7 * 24 * 60 * 60 * 1000;
+  let store = {};
+  try { store = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
+  let timer;
+  const save = () => { clearTimeout(timer); timer = setTimeout(() => fs.writeFile(FILE, JSON.stringify(store), () => {}), 2000); };
+  const queue = new Map();
+  let active = 0;
+  const pump = () => {
+    while (active < 3 && queue.size) {
+      const [imdb, it] = queue.entries().next().value;
+      queue.delete(imdb);
+      active++;
+      resolveRt(imdb, { type: it.type, name: it.name, year: it.year })
+        .then((r) => { if (!r) remember(imdb, null); })
+        .catch(() => remember(imdb, null))
+        .finally(() => { active--; pump(); });
+    }
+  };
+  function remember(imdb, p, t = null) { store[imdb] = { p, t, at: Date.now() }; save(); }
+  const known = (imdb) => { const e = store[imdb]; return e && (e.p !== null || Date.now() - e.at < MISS_RETRY) ? e : null; };
+  // Adds `popcorn` to each item that has a known score and queues the rest.
+  const enrich = (items) => (items || []).map((it) => {
+    if (!it || !/^tt\d+$/.test(it.id)) return it;
+    const e = known(it.id);
+    if (!e) { if (!queue.has(it.id) && queue.size < 2000) queue.set(it.id, it); pump(); return it; }
+    // JustWatch sometimes lacks the Tomatometer RT has; fill it from the same lookup.
+    const out = { ...it, popcorn: e.p }; // null = RT has no Popcornmeter (the UI won't look it up again)
+    if (out.tomato == null && typeof e.t === 'number') out.tomato = e.t;
+    return out;
+  });
+  return { remember, enrich };
+})();
 
 app.get('/api/rt/:imdb', async (req, res) => {
   const { imdb } = req.params;
@@ -292,7 +332,7 @@ app.get('/api/home/chart/:service', async (req, res) => {
     const chart = await jw.weeklyChart(req.params.service);
     if (!chart) return res.status(404).json({ error: 'unknown service' });
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.json(chart);
+    res.json({ ...chart, items: popcorn.enrich(chart.items) });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
@@ -313,8 +353,8 @@ app.get('/api/home/service/:service', async (req, res) => {
   try {
     const page = await jw.servicePage(req.params.service);
     if (!page) return res.status(404).json({ error: 'unknown service' });
-    res.setHeader('Cache-Control', 'public, max-age=1800');
-    res.json(page);
+    res.setHeader('Cache-Control', 'public, max-age=300'); // short: Popcornmeter scores fill in between loads
+    res.json({ ...page, sections: page.sections.map((sec) => ({ ...sec, items: popcorn.enrich(sec.items) })) });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
@@ -329,7 +369,8 @@ app.get('/api/home/similar', async (req, res) => {
   const exclude = new Set(String(req.query.exclude || '').split(',').filter((x) => /^tt\d+$/.test(x)));
   try {
     res.setHeader('Cache-Control', 'no-cache'); // personal; JustWatch responses are cached server-side
-    res.json(await jw.recommendations(seeds, exclude));
+    const r = await jw.recommendations(seeds, exclude);
+    res.json({ forYou: popcorn.enrich(r.forYou), because: r.because.map((b) => ({ ...b, items: popcorn.enrich(b.items) })) });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
@@ -338,8 +379,9 @@ app.get('/api/home/similar', async (req, res) => {
 // GET /api/home/browse?genre=hrr&type=movie|series&service=netflix&sort=popular&after=cursor → { items, next }
 app.get('/api/home/browse', async (req, res) => {
   try {
-    res.setHeader('Cache-Control', 'public, max-age=1800');
-    res.json(await jw.browse(req.query));
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    const page = await jw.browse(req.query);
+    res.json({ ...page, items: popcorn.enrich(page.items) });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
