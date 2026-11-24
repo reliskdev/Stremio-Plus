@@ -3,6 +3,9 @@
 _Describes what exists now. History lives in `tasks/`. Updated at the end of every task._
 
 ## Running it
+- macOS: Stremio is patched (task 044, `stremio-plus patch` / `restore` / `status`; `setup` patches and enables the
+  agent). Opening Stremio any way loads the mods with no relaunch; the Stremio+ launcher additionally injects the
+  window-chrome dylib (a plain Dock/Spotlight launch has the normal title bar for now).
 - `bin/stremio-plus launch` or ~/Applications/Stremio+.app → Stremio.app with `--webui-url=http://127.0.0.1:7011/`.
 - Cross-platform since task 043: Node CLI (`cli/`), per-OS modules for macOS / Windows / Linux, one-line installers
   (`install.sh`, `install.ps1`) that fetch the release tarball from GitHub (`tools/package.js` builds it; prebuilt UI
@@ -100,6 +103,9 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Old-style configure page (see above).
 
 ## Open follow-ups
+- Patch follow-ups (task 044): load the chrome dylib from the patched app itself (LC_LOAD_DYLIB) so Dock launches get
+  the title bar too; Windows patch (binary URL swap in stremio-shell-ng.exe, no proxy there); release v0.2.0 after the
+  user has lived with it.
 - Recommendations: country fixed to US; taste refreshes on Board mount only; not yet checked with the real library (task 025).
 - Restyle the addon configure page to DESIGN.md.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).

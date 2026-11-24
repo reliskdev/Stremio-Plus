@@ -45,3 +45,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [041 · Up next card](041-up-next.md): player card near the end: next episode with IMDb rating (replaces the stock popup), or in a movie's credits a similar title you don't own with its Tomatometer
 - [042 · Quick rating](042-quick-rating.md): thumbs up/down on the Up next card (stored locally); likes lead and weigh more in Picked for you, dislikes push similar titles down
 - [043 · Cross-platform CLI and installers](043-cross-platform.md): Node CLI with macOS / Windows / Linux modules, one-line installers fetching a release tarball (prebuilt UI, private Node if needed), `setup` / `shortcut` / `uninstall`
+- [044 · Patch Stremio (no more close-and-reopen)](044-patch-stremio.md): macOS Stremio's bundled proxy serves the Stremio+ UI (re-signed, backed up, `restore`); fork namespaces core storage under the shared origin

@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const P = require('./paths');
-const { sleep, run, ping, getJson, alive, readPid, stamp } = require('./util');
+const { sleep, run, ping, getJson, alive, readPid, stamp, readConfig, writeConfig } = require('./util');
+const patcher = require('./patch');
 
 const platform = (() => {
     try { return require(`./platform/${process.platform}`); } catch (e) {
@@ -21,6 +22,8 @@ const HELP = `Stremio+ ${P.version()} (${platform.name})
   stremio-plus enable      login agent: server always on, Stremio always opens with the mods
   stremio-plus disable     remove the login agent
   stremio-plus start|stop|restart   control the server (addon :7010 + UI :7011)
+  stremio-plus patch       make Stremio itself open with the mods (any launch: Dock, Spotlight, links)
+  stremio-plus restore     undo the patch: put the original Stremio files back
   stremio-plus logs        follow the server log
   stremio-plus shortcut    (re)create the Stremio+ launcher (app / Start menu / desktop entry)
   stremio-plus setup       install dependencies and the launcher (run by the installer)
@@ -93,12 +96,22 @@ const npmInstall = () => new Promise((resolve, reject) => {
 // ---------- Stremio ----------
 
 const isModded = (p) => p.args.includes('--webui-url');
+const patched = () => patcher.status() === 'patched';
 
+// Patched Stremio loads the mods by itself (see cli/patch.js); otherwise it is launched with --webui-url.
 const launch = async () => {
     requireStremio();
+    const wasVanilla = fs.existsSync(P.VANILLA_FLAG);
     fs.rmSync(P.VANILLA_FLAG, { force: true });
     await start();
     const list = platform.procs();
+    if (patched()) {
+        // A window still showing stock (vanilla) or the old --webui-url origin has to reload into the patched UI.
+        if (list.length && !wasVanilla && !list.some(isModded)) { platform.focus(); return; }
+        if (list.length) await platform.quit(list.map((p) => p.pid));
+        platform.openPatched();
+        return;
+    }
     if (list.some(isModded)) { platform.focus(); return; }
     if (list.length) await platform.quit(list.map((p) => p.pid));
     platform.openModded();
@@ -111,6 +124,29 @@ const vanilla = async () => {
     const list = platform.procs();
     if (list.length) await platform.quit(list.map((p) => p.pid));
     platform.openStock();
+};
+
+// ---------- patch ----------
+
+const patch = async () => {
+    requireStremio();
+    const running = platform.procs();
+    console.log(patcher.patch());
+    writeConfig({ patch: true });
+    if (running.length) {
+        console.log('restarting Stremio to load the patch…');
+        await launch();
+    }
+};
+
+const restore = async () => {
+    const running = platform.procs();
+    writeConfig({ patch: false }); // first, so the agent doesn't re-patch while files are being put back
+    console.log(patcher.restore());
+    if (running.length) {
+        await platform.quit(running.map((p) => p.pid));
+        platform.openStock();
+    }
 };
 
 // ---------- login agent ----------
@@ -150,7 +186,12 @@ const daemon = async () => {
         try {
             if (fingerprint() !== print) { agentLog('CLI changed; reloading agent'); restartDaemon(); }
             if (!await serverUp()) await start({ quiet: true });
-            if (!fs.existsSync(P.VANILLA_FLAG) && !platform.check()) {
+            // A Stremio update replaces the patched files: patch the new version (unless the user restored).
+            if (patcher.supported() && readConfig().patch !== false && patcher.status() === 'stock') {
+                try { agentLog(patcher.patch()); writeConfig({ patch: true }); } catch (e) { agentLog(`patch failed: ${e.message}`); }
+            }
+            // Patched Stremio needs no swapping; only unpatched launches get closed and reopened with --webui-url.
+            if (!patched() && !fs.existsSync(P.VANILLA_FLAG) && !platform.check()) {
                 const stock = platform.procs().find((p) => !isModded(p) && p.age < 20);
                 if (stock) {
                     agentLog(`stock Stremio opened (pid ${stock.pid}); reopening with the mods`);
@@ -212,7 +253,17 @@ const setup = async () => {
         console.warn(`\n${problem}\nInstall Stremio, then run: stremio-plus shortcut`);
     } else {
         shortcut();
-        if (platform.autostartEnabled()) await enable();
+        let agent = platform.autostartEnabled();
+        if (patcher.supported() && readConfig().patch !== false) {
+            try {
+                console.log(patcher.patch());
+                writeConfig({ patch: true });
+                agent = true; // a patched Stremio needs the server up whenever it opens (it falls back to stock otherwise)
+            } catch (e) {
+                console.warn(`couldn't patch Stremio (${e.message}); the Stremio+ launcher still opens it with the mods`);
+            }
+        }
+        if (agent) await enable();
     }
 };
 
@@ -220,6 +271,7 @@ const halt = async () => { await stopDaemon(); await stop({ quiet: true }); };
 
 const uninstall = async () => {
     await halt();
+    if (patcher.status() === 'patched') console.log(patcher.restore());
     platform.disableAutostart();
     platform.removeShortcut();
     console.log('removed the launcher and login agent');
@@ -296,7 +348,8 @@ const logs = () => {
 const COMMANDS = {
     launch, vanilla, enable, disable, daemon, start, stop,
     restart: async () => { await stop({ quiet: true }); await start(); },
-    logs, shortcut, setup, uninstall, halt, build, apply, test,
+    logs, shortcut, setup, uninstall, halt, build, apply, test, patch, restore,
+    status: () => console.log(`Stremio: ${patcher.status()}`),
     version: () => console.log(P.version()),
     help: () => console.log(HELP),
 };

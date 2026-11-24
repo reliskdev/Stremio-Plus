@@ -10,8 +10,20 @@ install and commands.
   execute the brief, verify, commit, then log it in docs/ and update STATE.md.
 
 ## How it fits together
-- Stremio is never modified. `bin/stremio-plus launch` runs it with `--webui-url=http://127.0.0.1:7011/`
-  (macOS Stremio.app, Windows `stremio-shell-ng.exe`, Linux Qt shell / Flatpak all accept the flag).
+- Stremio is patched Spicetify-style, always restorable (`cli/patch.js`, task 044; macOS only so far). Mac Stremio loads
+  web.stremio.com through its bundled streaming server (`localhost:11470/proxy/…`, `Contents/MacOS/server.js`); the
+  patch makes that proxy serve the Stremio+ UI from :7011 (falls back to stock when the server is down or the vanilla
+  flag is set), then re-signs ad hoc with the original entitlements (server.js first: it is signed via xattrs).
+  Backups (server.js, main exe, _CodeSignature, entitlements; copied with `ditto`) live in
+  `addon/data/stremio-backup/macos-<version>/`; `restore` brings the Apple signature back. The agent re-patches after
+  Stremio updates unless config `patch: false`. So any launch (Dock, Spotlight, links) opens the mods directly.
+- Inside patched Stremio the UI shares the stock origin (localhost:11470). The live stock core writes storage schema 31,
+  the published stremio-core-web the fork uses is schema 25 and refuses to downgrade, so the fork namespaces core
+  storage (`web/src/mods/coreStorage.ts`, keys prefixed `stremio-plus:`) whenever it is served under `/proxy/`.
+  Consequence: one login inside patched Stremio; stock data is never touched. A top-level hop to 127.0.0.1:7011 was
+  tried and leaves the native splash up (the shell only dismisses it for its own page).
+- Unpatched fallback (other OSes, or patch failed): `bin/stremio-plus launch` runs Stremio with
+  `--webui-url=http://127.0.0.1:7011/` (macOS Stremio.app, Windows `stremio-shell-ng.exe`, Linux Qt shell / Flatpak).
 - The CLI is Node: `cli/index.js` (commands) + `cli/platform/<os>.js` (find/launch/quit Stremio, login agent,
   launcher shortcut). `bin/stremio-plus` (bash) and `bin/stremio-plus.cmd` are thin wrappers that prefer the private
   Node in `runtime/` (installer-downloaded) over the system one. Windows shortcuts go through `bin/hidden.vbs`.

@@ -54,6 +54,13 @@ const openModded = () => {
     return run('open', ['-a', APP, ...env, '--args', `--webui-url=${P.UI_URL}`]).ok;
 };
 
+// Patched Stremio loads the mods itself; going through here only adds the window-chrome dylib.
+const openPatched = () => {
+    buildChrome();
+    const env = fs.existsSync(CHROME_LIB) ? ['--env', `DYLD_INSERT_LIBRARIES=${CHROME_LIB}`] : [];
+    return run('open', ['-a', APP, ...env]).ok;
+};
+
 const openStock = () => run('open', ['-a', APP]).ok;
 const focus = () => run('open', ['-a', APP]).ok;
 
@@ -128,6 +135,6 @@ const ownsShortcut = () => {
 const removeShortcut = () => { if (ownsShortcut()) fs.rmSync(LAUNCHER_APP, { recursive: true, force: true }); };
 
 module.exports = {
-    name: 'macOS', check, procs, openModded, openStock, focus, quit, buildChrome,
+    name: 'macOS', check, procs, openModded, openPatched, openStock, focus, quit, buildChrome,
     enableAutostart, disableAutostart, autostartEnabled, stopAutostart, restartDaemon, createShortcut, removeShortcut,
 };
