@@ -185,9 +185,26 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       return JSON.stringify({ side: m.dataset.side, anim: ms.animationName, dur: ms.animationDuration, menuRadius: ms.borderRadius,
         labelRadius: ls.borderRadius, labelBg: ls.backgroundColor, menuBg: ms.backgroundColor, gap: m.getBoundingClientRect().top - l.getBoundingClientRect().bottom });
     }));
-    await clickText('Season 1');
+    const state = () => page.evaluate(() => {
+      const el = document.querySelector('[class*=seasons-bar] [class*=multiselect-menu]');
+      return getComputedStyle(el).borderRadius + ' | ' + (el.className.includes('active') ? 'active' : '-') + ' | sheet:' + !!document.querySelector('[data-side]');
+    });
+    // close by clicking the label again (click + reading inside the page, so the 160ms close timer can't race us)
+    console.log('closing via label:', await page.evaluate(() => new Promise((done) => {
+      const el = document.querySelector('[class*=seasons-bar] [class*=multiselect-menu]');
+      const read = () => getComputedStyle(el).borderRadius + ' | ' + (el.className.includes('active') ? 'active' : '-') + ' | sheet:' + !!document.querySelector('[data-side]');
+      document.elementFromPoint(1380, 128).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      document.elementFromPoint(1380, 128).click();
+      setTimeout(() => { const mid = read(); setTimeout(() => done('80ms: ' + mid + ' || 400ms: ' + read()), 320); }, 80);
+    })));
+    await resume();
+    await sleep(500);
+    // reopen and pick another season
+    await page.mouse.click(1380, 128);
+    await sleep(500);
+    await clickText('Season 2');
     await freeze(80);
-    await shot('17b-season-dropdown-closing');
+    console.log('closing via option:', await state());
     await resume();
     await sleep(500);
     console.log('after close:', await radius(), await page.evaluate(() => !!document.querySelector('[data-side]')));
