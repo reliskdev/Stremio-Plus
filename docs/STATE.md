@@ -34,6 +34,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
   show more, critics consensus, audience says, trailer (mp4 or YouTube), photos + lightbox, cast, facts footer.
 - Episode hero (Details with an episode selected): episode IMDb rating (IMDb datasets, `addon/data/imdb-episodes.json`)
   in Stremio's IMDb fact + RT Tomatometer fact when RT scores the episode (`/api/rt/:imdb/episode/:s/:e`).
+- Episode rating heatmap (`src/rt/EpisodeHeatmap.tsx`): series overview on Details, under the trailer in the RT panel
+  (alone when RT has no match): row per season with its average, a cell per episode (rating, brightness = rating,
+  colour-only cells past 16 episodes); click opens the episode. Follows the RT panel toggle.
 - Episode list: IMDb rating per row (`/api/imdb/:imdb/episodes`); episode search removed.
 - Dropdowns (MultiselectMenu, app-wide): attached sheet; the open label squares only the edge touching the list (far corners unchanged) and the list wipes out of it in the same colour, folding back on close. Open: corners square first, then the sheet unfolds; close is the exact reverse; inset rounded rows, accent dot for selection.
 - Motion: house ease-out `@mods-ease` (`src/mods/motion.less`); animation plans and their status in `plans/`.

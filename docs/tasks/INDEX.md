@@ -38,3 +38,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [034 · Back button on service pages](034-service-back-button.md): service pages show Stremio's back chevron (MainNavBars `backButton`)
 - [035 · Scores in Search and Library](035-scores-search-library.md): already covered by the clean card hover; added a `scores` test step (Library unverifiable as guest)
 - [036 · Remembered stream preferences](036-stream-preferences.md): Settings → Mods → Streams (quality with Auto learning, size cap, audio language, avoid HDR) steer Best match and row order
+- [037 · Episode rating heatmap](037-episode-heatmap.md): series Details shows a season × episode grid of IMDb ratings (brightness = rating) under the trailer; click opens the episode

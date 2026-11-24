@@ -1,5 +1,5 @@
 // UI test harness: drives the modded Stremio UI (http://127.0.0.1:7011) in headless Brave and saves screenshots to ./shots.
-// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores]  (or: bin/stremio-plus test <step>)
+// Usage: node test.js [all|install|board|discover|details|interact|flix|episode|player|tooltip|episodes|mods|motion|recs|services|scores|heatmap]  (or: bin/stremio-plus test <step>)
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -448,6 +448,28 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.goto(UI + '#/library', { waitUntil: 'networkidle2' });
     await sleep(5000);
     await hoverFirst('[class*=library-container]', '41-library-hover');
+  }
+
+  if (step === 'all' || step === 'heatmap') {
+    // Episode ratings grid on series Details (Dexter: 12-episode seasons; Breaking Bad: 16, dense cells)
+    for (const [id, name] of [['tt0773262', '42-heatmap-dexter'], ['tt0903747', '43-heatmap-dense']]) {
+      await page.goto(UI + '#/detail/series/' + id, { waitUntil: 'networkidle2' });
+      await sleep(8000);
+      const info = await page.evaluate(() => {
+        const h = [...document.querySelectorAll('[class*=heatmap]')].find((e) => /(^| )heatmap/.test([...e.classList].join(' ').replace(/[-_][\w]+$/g, '')) || e.querySelector('[class*=cell]'));
+        if (!h) return null;
+        h.scrollIntoView({ block: 'center' });
+        return { rows: h.querySelectorAll('[class*=row]').length, cells: h.querySelectorAll('button').length, first: h.querySelector('button')?.title };
+      });
+      console.log(name, JSON.stringify(info));
+      await sleep(800);
+      await shot(name);
+    }
+    // Click S2 E3 on Breaking Bad: should open that episode
+    const clicked = await page.evaluate(() => { const b = [...document.querySelectorAll('button[title^="S2 E3"]')][0]; if (!b) return false; b.click(); return b.title; });
+    await sleep(3000);
+    console.log('clicked:', clicked, '→', await page.evaluate(() => decodeURIComponent(location.hash)));
+    await shot('44-heatmap-clicked');
   }
 
   console.log('errors:', errors.slice(0, 15).join('\n'));

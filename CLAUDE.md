@@ -28,7 +28,7 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   `no-cache`, so a rebuild + Stremio reload (Cmd+R or `apply`) picks it up.
 - Typecheck: `cd web && npx tsc --noEmit -p .`
 - Verify visually with `bin/stremio-plus test <step>` and read the PNGs in `tools/ui-test/shots/`
-  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion, recs, services, scores). The test browser profile lives in
+  (steps: install, board, discover, details, interact, flix, episode, player, tooltip, episodes, mods, motion, recs, services, scores, heatmap). The test browser profile lives in
   `tools/ui-test/.profile` (guest account with the addon installed).
 
 ## Design rules (from PRODUCT.md / DESIGN.md, user feedback)
@@ -57,6 +57,8 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   before that (pre task 027) runs stale launch code: `launchctl kickstart -k gui/$(id -u)/com.stremio-plus.agent`.
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
+- The web build's TS target doesn't downlevel iterators: `[...map.entries()]` / `[...set]` become `[iterator]`.
+  Use `Array.from(...)`.
 - Stremio's global CSS gives every div `overflow: hidden`; containers holding a MultiselectMenu need `overflow: visible`.
 - `stremio://` links always open as https in Stremio, so the local addon is installed by pasting the
   `http://127.0.0.1:7010/<config>/manifest.json` URL into Stremio's addon search.
