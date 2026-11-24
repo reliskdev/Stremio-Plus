@@ -22,3 +22,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [018 · Monochrome tooltips](018-mono-tooltips.md): tooltips and the seek tooltip use the dropdown's neutral surface
 - [019 · Agent crash fix](019-agent-crash.md): agent waits for stock Stremio to exit and retries the reopen; server survives agent restarts
 - [020 · Motion audit](020-motion-audit.md): improve-animations audit (plans/) and all seven fixes: ease-out dropdown, reopen mid-close, reduced motion, instant neighbour tooltips, shared token, lightbox motion, score fade-in
+- [021 · Dropdown mirrored motion](021-dropdown-mirror-motion.md): open = corners square then sheet unfolds; close is the exact reverse (iOS sheet curve, 300ms)
