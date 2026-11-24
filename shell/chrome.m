@@ -157,7 +157,11 @@ static void configure(NSWindow *w) {
     state.window = w;
     objc_setAssociatedObject(w, &kStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
+    // AppKit keeps the content size when the content view goes full-size, so the frame would lose the title bar's
+    // height (and Stremio saves that, so the window shrank on every launch). Keep the frame.
+    NSRect frame = w.frame;
     w.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    if (!NSEqualRects(w.frame, frame)) [w setFrame:frame display:YES];
     w.titlebarAppearsTransparent = YES;
     w.titleVisibility = NSWindowTitleHidden;
     if (@available(macOS 11.0, *)) w.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;

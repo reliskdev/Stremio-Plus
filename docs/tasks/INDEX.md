@@ -24,3 +24,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [020 · Motion audit](020-motion-audit.md): improve-animations audit (plans/) and all seven fixes: ease-out dropdown, reopen mid-close, reduced motion, instant neighbour tooltips, shared token, lightbox motion, score fade-in
 - [021 · Dropdown mirrored motion](021-dropdown-mirror-motion.md): open = corners square then sheet unfolds; close is the exact reverse (iOS sheet curve, 300ms)
 - [022 · Transparent title bar](022-transparent-titlebar.md): injected dylib hides the title bar; larger traffic lights in a compact, draggable nav bar
+- [023 · Better stream picker](023-stream-picker.md): streams grouped by quality with pills, best match, readable rows, errors folded away; window-shrink fix

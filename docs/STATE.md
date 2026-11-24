@@ -45,6 +45,10 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Mac title bar (with the dylib): transparent, UI runs to the top; traffic lights 1.18x, centred in the nav bar where the
   logo was; compact header (4.25rem bar, smaller search/buttons); empty bar drags/double-click zooms. Lights fade
   with the player controls. Web side: `src/mods/macChrome.ts`.
+- Smart stream list (Details panel, `src/mods/streams/`): quality pills with counts (4K / 1080p / 720p / Other),
+  Best match on top (last used, else score), sections by quality (6 shown, "Show N more"), compact rows
+  (quality, HDR, size, source/codec/audio/seeds/site, flags, release dimmed), addon errors as one dim line.
+  Toggle in Settings → Mods.
 - Discover: slim blurred search + filter pills (DESIGN.md pills), larger posters (one column fewer), tight padding, small gap to preview.
 - Wide home rows (`src/mods/FlixRow.tsx`): landscape cards + hover preview. **Off by default** (user said
   "Stremio+, not Netflix"); restyled to native vocabulary.
@@ -63,4 +67,6 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Consider showing RT scores in Search results and Library.
 - Discover grid still clips hard under the filter row (fade tried and removed, task 007).
 - Title bar: player and fullscreen behaviour not yet checked (task 022).
+- Stream picker: remember preferred quality; language preference (assumes English); Spotlight buttons can sit
+  under the compact header at one scroll position (task 023).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).
