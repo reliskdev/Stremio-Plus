@@ -40,8 +40,8 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 - Tooltips (app-wide): first one after 0.3s, neighbours instant; compact pill in the dropdown surface colour (neutral in Monochrome), 0.3s hover delay, slide-in, no glow.
 - Spotlight: Stremio's stock board, unmodified (user likes it; task 008).
 - Recommendations home (`src/mods/home/`, toggle `recsHome`, on): after Continue Watching, "Picked for you" (blend of
-  titles similar to your library, watched first), "Browse by genre" pills, then "Top this week on <service>" and
-  "Because you watched X" rows interleaved; addon rows below. Services picked in Settings → Mods → Home.
+  titles similar to your library, watched first), then "Top this week on <service>" and
+  "Because you watched X" rows interleaved (no genre row: genres live on the nav tab); addon rows below. Services picked in Settings → Mods → Home.
 - Genres page (`#/genres`, nav tab): genre pills, type / service / sort dropdowns, poster grid with infinite scroll.
 - Clean poster grids (`MetaItem`): no titles under any card (incl. Continue Watching / Library; ⋮ menu is a blurred pill on the poster corner); blurred hover strip with name + scores.
 - Clean posters: badge posters swapped for clean metahub art in the modded UI.

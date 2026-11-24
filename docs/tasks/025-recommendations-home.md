@@ -59,3 +59,11 @@
 - Country is fixed to US; could follow the profile/locale.
 - Taste refresh happens on Board mount (usually app launch); titles watched mid-session show up next launch.
 - Genres page: multi-genre selection, text search within a genre, remembering the last filters.
+
+## Addendum: genre row removed from the Board
+- User: "Remove the browse by genre from the main page keep it on the side buttons".
+- `HomeRows.tsx`: genre pill row and its styles (`HomeRows.less`) removed; the Board now goes Picked for you, then
+  service charts and "Because you watched" interleaved. Genres stay on the nav tab page (`#/genres`); chart rows'
+  "See All" still opens it filtered to that service.
+- Verified: typecheck clean, `apply` compiled, `test recs` rows: Picked for you | Top this week on Netflix | Because
+  you watched Dune: Part Two | ..., screenshot shows no genre row.
