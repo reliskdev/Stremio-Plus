@@ -34,6 +34,8 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
 - No decorative gradients, no coloured/tinted bordered boxes, no outlines/strokes, no glows, no gold badges,
   no letter-spaced eyebrow labels. Blur for legibility over artwork. Accent only for primary actions/selection.
 - The `impeccable` skill is installed; use it (with PRODUCT.md / DESIGN.md at this root) for UI work.
+- Motion: Emil Kowalski's skills are installed (`animate`, `choreograph`, `animation-performance`, and the
+  user-invoked `review-animations` / `improve-animations`). Use `animate`/`choreograph` for any new or changed motion.
 
 ## Working on the addon (addon/)
 - `node server.js` (or `bin/stremio-plus restart`). Caches in `addon/data/` (matches, details, cinemeta, posters);
