@@ -17,6 +17,11 @@ install and commands.
   Backups (server.js, main exe, _CodeSignature, entitlements; copied with `ditto`) live in
   `addon/data/stremio-backup/macos-<version>/`; `restore` brings the Apple signature back. The agent re-patches after
   Stremio updates unless config `patch: false`. So any launch (Dock, Spotlight, links) opens the mods directly.
+- The window chrome dylib is bundled into patched Stremio too: copied to `Contents/MacOS/libstremio-plus-chrome.dylib`
+  (+ a `.root` file pointing at the Stremio+ folder) and weak-loaded via an `LC_LOAD_WEAK_DYLIB` inserted into the
+  executable's header padding (`addWeakDylib` in cli/patch.js). The launcher then skips DYLD injection (no double
+  load). The dylib does nothing when `addon/data/.vanilla` exists. `apply` / `patch` refresh the bundled copy when
+  shell/chrome.m is rebuilt. Config `chrome: false` keeps it launcher-only.
 - Inside patched Stremio the UI shares the stock origin (localhost:11470). The live stock core writes storage schema 31,
   the published stremio-core-web the fork uses is schema 25 and refuses to downgrade, so the fork namespaces core
   storage (`web/src/mods/coreStorage.ts`, keys prefixed `stremio-plus:`) whenever it is served under `/proxy/`.
@@ -33,7 +38,7 @@ install and commands.
 - Per-user things (launchd label, shortcuts, autostart entries) can belong to another copy (dev checkout vs install);
   the CLI only touches them when they point at its own ROOT. `stop` asks `GET :7011/__stremio-plus` for the server's
   root + pid and never kills another copy's server.
-- `shell/chrome.m`: dylib injected via `DYLD_INSERT_LIBRARIES` (`open --env`, Stremio allows it) for the transparent
+- `shell/chrome.m`: dylib (bundled into patched Stremio, else injected via `DYLD_INSERT_LIBRARIES`) for the transparent
   title bar; the web UI talks to it through the `stremioPlusChrome` WKScriptMessageHandler (`src/mods/macChrome.ts`).
   `apply`/`launch` rebuild it when the source changes. Can't be tested in the headless UI test.
   It also feeds macOS Now Playing: `stremioPlusMedia` handler (`src/mods/nowPlaying.ts`) + swizzled

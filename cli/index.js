@@ -314,6 +314,7 @@ const build = () => new Promise((resolve, reject) => {
 const apply = async () => {
     await build();
     platform.buildChrome();
+    if (patcher.status() === 'patched') console.log(await patcher.patch()); // refresh the chrome bundled in Stremio
     await stop({ quiet: true });
     await start();
     const list = platform.procs();

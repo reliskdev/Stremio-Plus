@@ -56,6 +56,7 @@ const openModded = () => {
 
 // Patched Stremio loads the mods itself; going through here only adds the window-chrome dylib.
 const openPatched = () => {
+    if (require('../patch').chromeBundled()) return run('open', ['-a', APP]).ok;
     buildChrome();
     const env = fs.existsSync(CHROME_LIB) ? ['--env', `DYLD_INSERT_LIBRARIES=${CHROME_LIB}`] : [];
     return run('open', ['-a', APP, ...env]).ok;

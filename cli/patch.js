@@ -26,7 +26,85 @@ const MAC = {
     ffmpeg: `${MAC_APP}/Contents/MacOS/ffmpeg`,
     splashVideo: `${MAC_APP}/Contents/MacOS/splash.mp4`,
     splashImage: `${MAC_APP}/Contents/MacOS/splash.jpg`,
+    chromeLib: `${MAC_APP}/Contents/MacOS/libstremio-plus-chrome.dylib`,
+    chromeRoot: `${MAC_APP}/Contents/MacOS/libstremio-plus-chrome.root`,
 };
+const CHROME_LOAD = '@executable_path/libstremio-plus-chrome.dylib';
+const CHROME_BUILT = path.join(P.ROOT, 'shell', 'build', 'libstremio-plus-chrome.dylib');
+
+// ---------- Mach-O: weak-load the window chrome from Stremio's own executable ----------
+// A weak LC_LOAD_DYLIB means Stremio still starts if the dylib is ever missing. Thin 64-bit executables only (Stremio
+// ships arm64 and x86_64 builds separately); the command goes in the padding between the load commands and the first
+// section, which Stremio's linker leaves (192 bytes in 5.1.31; this needs 72).
+const LC_SEGMENT_64 = 0x19;
+const LC_LOAD_DYLIB = 0xc;
+const LC_LOAD_WEAK_DYLIB = 0x80000018;
+
+const loadCommands = (buf) => {
+    if (buf.readUInt32LE(0) !== 0xfeedfacf) throw new Error('not a thin 64-bit Mach-O executable');
+    const ncmds = buf.readUInt32LE(16);
+    const sizeofcmds = buf.readUInt32LE(20);
+    let off = 32;
+    let firstSection = Infinity;
+    const dylibs = [];
+    for (let i = 0; i < ncmds; i++) {
+        const cmd = buf.readUInt32LE(off);
+        const size = buf.readUInt32LE(off + 4);
+        if (cmd === LC_SEGMENT_64) {
+            const nsects = buf.readUInt32LE(off + 64);
+            for (let k = 0; k < nsects; k++) {
+                const sect = off + 72 + k * 80;
+                const fileOff = buf.readUInt32LE(sect + 48);
+                if (fileOff && buf.readBigUInt64LE(sect + 40) > 0n) firstSection = Math.min(firstSection, fileOff);
+            }
+        }
+        if (cmd === LC_LOAD_DYLIB || cmd === LC_LOAD_WEAK_DYLIB) {
+            dylibs.push(buf.toString('utf8', off + buf.readUInt32LE(off + 8), off + size).replace(/\0+$/, ''));
+        }
+        off += size;
+    }
+    return { ncmds, sizeofcmds, end: 32 + sizeofcmds, firstSection, dylibs };
+};
+
+const hasChromeLoad = () => {
+    try { return loadCommands(fs.readFileSync(MAC.exe)).dylibs.includes(CHROME_LOAD); } catch { return false; }
+};
+
+const addWeakDylib = (file, name) => {
+    const buf = fs.readFileSync(file);
+    const lc = loadCommands(buf);
+    if (lc.dylibs.includes(name)) return;
+    const str = Buffer.from(`${name}\0`);
+    const size = Math.ceil((24 + str.length) / 8) * 8;
+    if (lc.end + size > lc.firstSection) throw new Error(`no room for another load command (${lc.firstSection - lc.end} bytes free)`);
+    const cmd = Buffer.alloc(size);
+    cmd.writeUInt32LE(LC_LOAD_WEAK_DYLIB, 0);
+    cmd.writeUInt32LE(size, 4);
+    cmd.writeUInt32LE(24, 8);          // name offset
+    cmd.writeUInt32LE(2, 12);          // timestamp
+    cmd.writeUInt32LE(0x10000, 16);    // current version 1.0.0
+    cmd.writeUInt32LE(0x10000, 20);    // compatibility version 1.0.0
+    str.copy(cmd, 24);
+    if (buf.subarray(lc.end, lc.end + size).some((b) => b !== 0)) throw new Error('header padding is not empty');
+    cmd.copy(buf, lc.end);
+    buf.writeUInt32LE(lc.ncmds + 1, 16);
+    buf.writeUInt32LE(lc.sizeofcmds + size, 20);
+    fs.writeFileSync(file, buf);
+};
+
+// Copy the built dylib into the app (and where to find the Stremio+ folder, for the vanilla flag).
+const installChrome = () => {
+    require('./platform/darwin').buildChrome();
+    if (!fs.existsSync(CHROME_BUILT)) return [];
+    fs.rmSync(MAC.chromeLib, { force: true });
+    fs.copyFileSync(CHROME_BUILT, MAC.chromeLib);
+    fs.writeFileSync(MAC.chromeRoot, `${P.ROOT}\n`);
+    return [MAC.chromeLib, MAC.chromeRoot];
+};
+
+const chromeCurrent = () => fs.existsSync(MAC.chromeLib) && fs.existsSync(CHROME_BUILT)
+    && fs.readFileSync(MAC.chromeLib).equals(fs.readFileSync(CHROME_BUILT))
+    && fs.existsSync(MAC.chromeRoot) && fs.readFileSync(MAC.chromeRoot, 'utf8').trim() === P.ROOT;
 
 // Anchors in Stremio's server.js (shell 5.1.x). If an update changes them, patching refuses instead of guessing.
 const FETCH_CALL = '})), handleFetchWithRedirects(dest, req, headers, httpsAgent, opts, cfgOpts).then(';
@@ -127,7 +205,16 @@ const prepareSplash = async (backup) => {
 
 const macPatch = async () => {
     const status = macStatus();
-    if (status === 'patched') return 'already patched';
+    if (status === 'patched') {
+        if (readConfig().chrome === false) return 'already patched';
+        // Patched before the bundled window chrome existed: redo the whole patch from the backup.
+        if (!hasChromeLoad()) { macRestore(); return macPatch(); }
+        require('./platform/darwin').buildChrome();
+        if (chromeCurrent()) return 'already patched';
+        const files = installChrome();
+        sign(path.join(macBackupDir(), 'entitlements.plist'), files);
+        return 'updated the window chrome in Stremio';
+    }
     if (status === 'missing') throw new Error(`Stremio isn't installed in ${MAC_APP}`);
     if (status === 'unsupported') throw new Error(`this Stremio version (${macVersion()}) isn't supported by the patch yet`);
     try { fs.accessSync(MAC.server, fs.constants.W_OK); } catch {
@@ -147,6 +234,17 @@ const macPatch = async () => {
             fs.copyFileSync(splash.video, MAC.splashVideo);
             fs.copyFileSync(splash.image, MAC.splashImage);
             files.push(MAC.splashVideo, MAC.splashImage);
+        }
+        if (readConfig().chrome !== false) {
+            try {
+                const chrome = installChrome();
+                if (chrome.length) { addWeakDylib(MAC.exe, CHROME_LOAD); files.push(...chrome); }
+            } catch (e) {
+                console.warn(`window chrome stays launcher-only (${e.message})`);
+                fs.rmSync(MAC.chromeLib, { force: true });
+                fs.rmSync(MAC.chromeRoot, { force: true });
+                ditto(path.join(dir, 'Stremio'), MAC.exe);
+            }
         }
         // A broken server.js means Stremio starts without its streaming server: check with Stremio's own node first.
         const check = run(`${MAC_APP}/Contents/MacOS/node`, ['--check', MAC.server]);
@@ -172,6 +270,8 @@ const macRestore = () => {
         if (fs.existsSync(copy)) { fs.rmSync(file, { force: true }); ditto(copy, file); }
     }
     ditto(path.join(dir, 'Stremio'), MAC.exe);
+    fs.rmSync(MAC.chromeLib, { force: true });
+    fs.rmSync(MAC.chromeRoot, { force: true });
     fs.rmSync(MAC.sig, { recursive: true, force: true });
     ditto(path.join(dir, '_CodeSignature'), MAC.sig);
     const v = run('codesign', ['--verify', '--strict', '--deep', MAC_APP]);
@@ -187,6 +287,8 @@ const impl = {
 const forPlatform = () => impl[process.platform] || null;
 
 module.exports = {
+    // Patched Stremio loads the window chrome itself; the launcher must not inject a second copy.
+    chromeBundled: () => process.platform === 'darwin' && macStatus() === 'patched' && hasChromeLoad() && fs.existsSync(MAC.chromeLib),
     supported: () => !!forPlatform(),
     status: () => (forPlatform() ? forPlatform().status() : 'unsupported'),
     patch: () => {

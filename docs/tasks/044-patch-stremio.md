@@ -47,3 +47,12 @@
   still recoloured + the settled plus. Cached in `addon/data/splash/<version>/`; backed up and restored with the rest
   (older backups get the splash added on the next patch). Config `splash: false` keeps Stremio's own.
 - Verified with screenshots during a plain `open -a Stremio`: purple particles → diamond with "+", then the UI.
+
+## Addendum: window chrome on every launch
+- User: "the standard stremio header is broken, stremio plus isnt": opening Stremio.app directly gave the mods under a
+  stock grey title bar, since only the launcher injected the chrome dylib.
+- The patch now copies the dylib into `Contents/MacOS/` and inserts an `LC_LOAD_WEAK_DYLIB`
+  (`@executable_path/libstremio-plus-chrome.dylib`, 72 bytes into the 192 free) before re-signing. A `.root` file next to
+  it tells the dylib where Stremio+ lives; it skips itself in vanilla mode. The launcher stops injecting when bundled.
+- Verified: plain `open -a Stremio` → one clean header with the traffic lights in the nav bar (dylib loaded, lsof);
+  `vanilla` → stock UI with the normal title bar; `restore` → no extra files or load command, Apple signature verifies.

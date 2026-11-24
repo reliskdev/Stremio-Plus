@@ -1,6 +1,8 @@
-// Stremio+ window chrome. Injected into the stock Stremio.app with DYLD_INSERT_LIBRARIES (its signature allows it;
-// the bundle is never modified). Hides the native title bar so the web UI runs to the top edge, moves the traffic
-// lights into Stremio's nav bar, and lets the empty parts of that bar drag the window like a real title bar.
+// Stremio+ window chrome. Loaded into Stremio.app two ways: patched Stremio carries a copy in Contents/MacOS with a
+// weak load command (cli/patch.js), so every launch gets it; unpatched, the launcher injects it with
+// DYLD_INSERT_LIBRARIES (Stremio's signature allows both). Hides the native title bar so the web UI runs to the top
+// edge, moves the traffic lights into Stremio's nav bar, and lets the empty parts of that bar drag the window like a
+// real title bar. In vanilla mode (stock UI, which has no room for the lights) it does nothing.
 //
 // The web UI (web/src/mods/macChrome.ts) sees `window.__stremioPlusChrome` and posts its geometry to the
 // `stremioPlusChrome` message handler, in CSS px (== points), top-left origin:
@@ -17,6 +19,7 @@
 #import <WebKit/WebKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
+#import <dlfcn.h>
 
 static const char kStateKey;
 
@@ -352,9 +355,27 @@ static void configure(NSWindow *w) {
     NSLog(@"[stremio-plus] chrome attached to window %ld", (long)w.windowNumber);
 }
 
+// Stremio+ root: a bundled copy finds it in libstremio-plus-chrome.root next to itself (written by the patch); the
+// launcher-injected copy lives in <root>/shell/build/.
+static NSString *stremioPlusRoot(void) {
+    Dl_info info;
+    if (!dladdr((const void *)stremioPlusRoot, &info) || !info.dli_fname) return nil;
+    NSString *dir = [@(info.dli_fname) stringByDeletingLastPathComponent];
+    NSString *pointer = [NSString stringWithContentsOfFile:[dir stringByAppendingPathComponent:@"libstremio-plus-chrome.root"]
+                                                  encoding:NSUTF8StringEncoding error:nil];
+    pointer = [pointer stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (pointer.length) return pointer;
+    return [[dir stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+}
+
 __attribute__((constructor)) static void stremioPlusChromeInit(void) {
     // Don't leak into child processes (node server, ffmpeg).
     unsetenv("DYLD_INSERT_LIBRARIES");
+    NSString *root = stremioPlusRoot();
+    if (root && [[NSFileManager defaultManager] fileExistsAtPath:[root stringByAppendingPathComponent:@"addon/data/.vanilla"]]) {
+        NSLog(@"[stremio-plus] vanilla mode: leaving the window alone");
+        return;
+    }
     installNowPlaying();
     dispatch_async(dispatch_get_main_queue(), ^{
         [NSTimer scheduledTimerWithTimeInterval:0.25 repeats:YES block:^(NSTimer *t) {
