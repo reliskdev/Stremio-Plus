@@ -44,3 +44,4 @@ One line per task, oldest first. Each links to the full write-up (brief, plan, a
 - [040 · Now Playing integration](040-now-playing.md): Control Center gets episode artwork, "Show · S1 E2", a moving scrubber, ±skip and scrubbing (dylib merges into the shell's Now Playing); cleared when the player closes
 - [041 · Up next card](041-up-next.md): player card near the end: next episode with IMDb rating (replaces the stock popup), or in a movie's credits a similar title you don't own with its Tomatometer
 - [042 · Quick rating](042-quick-rating.md): thumbs up/down on the Up next card (stored locally); likes lead and weigh more in Picked for you, dislikes push similar titles down
+- [043 · Cross-platform CLI and installers](043-cross-platform.md): Node CLI with macOS / Windows / Linux modules, one-line installers fetching a release tarball (prebuilt UI, private Node if needed), `setup` / `shortcut` / `uninstall`

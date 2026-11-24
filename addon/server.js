@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { GENRES, SERVICES, BASE_CATALOGS, encodeConfig, decodeConfig, catalogsFor } = require('./lib/config');
 const { seriesGraph } = require('./lib/seriesgraph');
 const { buildPath, fetchPage } = require('./lib/rt');
@@ -500,8 +501,12 @@ app.get(['/', '/configure', '/:config/configure'], (req, res) => {
 
 // ---------- Modded Stremio web UI (stremio-web fork build) ----------
 const UI_PORT = process.env.UI_PORT || 7011;
-const UI_BUILD = process.env.UI_BUILD || path.join(__dirname, '..', 'web', 'build');
+// Installed copies ship the prebuilt UI in ui/; a development checkout builds it into web/build.
+const UI_BUILD = process.env.UI_BUILD || [path.join(__dirname, '..', 'ui'), path.join(__dirname, '..', 'web', 'build')]
+  .find((dir) => fs.existsSync(path.join(dir, 'index.html'))) || path.join(__dirname, '..', 'web', 'build');
 const ui = express();
+// Lets the CLI tell its own server from another Stremio+ copy's before stopping it (UI port is localhost-only).
+ui.get('/__stremio-plus', (req, res) => res.json({ root: __dirname, pid: process.pid }));
 // Always revalidate: rebuilt mods reuse the same asset paths, and this is localhost anyway.
 ui.use(express.static(UI_BUILD, { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
 ui.use((req, res) => res.sendFile(path.join(UI_BUILD, 'index.html')));

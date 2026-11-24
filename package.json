@@ -1,0 +1,9 @@
+{
+  "name": "stremio-plus",
+  "version": "0.1.0",
+  "description": "Spicetify-style mod of the Stremio desktop app: Rotten Tomatoes scores, a richer Board, and more",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20" },
+  "repository": "github:reliskdev/Stremio-Plus"
+}

@@ -12,7 +12,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
   const browser = await puppeteer.launch({
-    executablePath: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    executablePath: process.env.BROWSER_PATH || '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
     headless: 'new',
     userDataDir: path.join(__dirname, '.profile'),
     args: ['--window-size=1600,1000', '--autoplay-policy=no-user-gesture-required', '--no-first-run'],

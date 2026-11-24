@@ -4,6 +4,9 @@ _Describes what exists now. History lives in `tasks/`. Updated at the end of eve
 
 ## Running it
 - `bin/stremio-plus launch` or ~/Applications/Stremio+.app → Stremio.app with `--webui-url=http://127.0.0.1:7011/`.
+- Cross-platform since task 043: Node CLI (`cli/`), per-OS modules for macOS / Windows / Linux, one-line installers
+  (`install.sh`, `install.ps1`) that fetch the release tarball from GitHub (`tools/package.js` builds it; prebuilt UI
+  in `ui/`, private Node in `runtime/` when the system has none). macOS verified; Windows and Linux untested.
 - One Node server (`addon/server.js`): addon on :7010, modded UI (`web/build`) on :7011.
 - Modded UI has its own storage origin: the user logs in once there; the addon is installed by pasting
   `http://127.0.0.1:7010/<config>/manifest.json` into Stremio's addon search (stremio:// links force https).
@@ -105,3 +108,5 @@ PRODUCT.md + DESIGN.md. Native Stremio styling; no gradients/bordered tinted box
 - Stream picker: one-click play of the Best match not built; Spotlight buttons can sit under the compact header at one
   scroll position (task 023).
 - Login agent (`bin/stremio-plus enable`) written; needs the user to run it once (task 010).
+- Windows / Linux ports untested on real machines; first GitHub release not published yet (repo
+  reliskdev/Stremio-Plus was private or empty, no `gh` CLI here). The stremio-web fork (`web/`) isn't on GitHub (task 043).

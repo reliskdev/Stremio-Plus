@@ -1,6 +1,7 @@
 # Stremio+ — working notes
 
-Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout and commands.
+Spicetify-style mod of the Stremio desktop app (macOS, Windows, Linux experimental). See README.md for layout,
+install and commands.
 
 ## Task history (read first)
 - `docs/STATE.md`: what exists now, known issues, open follow-ups.
@@ -9,7 +10,17 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   execute the brief, verify, commit, then log it in docs/ and update STATE.md.
 
 ## How it fits together
-- Stremio.app is never modified. `bin/stremio-plus launch` runs it with `--webui-url=http://127.0.0.1:7011/`.
+- Stremio is never modified. `bin/stremio-plus launch` runs it with `--webui-url=http://127.0.0.1:7011/`
+  (macOS Stremio.app, Windows `stremio-shell-ng.exe`, Linux Qt shell / Flatpak all accept the flag).
+- The CLI is Node: `cli/index.js` (commands) + `cli/platform/<os>.js` (find/launch/quit Stremio, login agent,
+  launcher shortcut). `bin/stremio-plus` (bash) and `bin/stremio-plus.cmd` are thin wrappers that prefer the private
+  Node in `runtime/` (installer-downloaded) over the system one. Windows shortcuts go through `bin/hidden.vbs`.
+- Installed copies (install.sh / install.ps1 → `~/.stremio-plus`, `%LOCALAPPDATA%\Stremio-Plus`) come from the
+  release tarball built by `tools/package.js`: no `web/`, prebuilt UI in `ui/` (the server prefers `ui/` over
+  `web/build`), universal dylib in `shell/build/`. `build`/`apply`/`test` only exist in a dev checkout.
+- Per-user things (launchd label, shortcuts, autostart entries) can belong to another copy (dev checkout vs install);
+  the CLI only touches them when they point at its own ROOT. `stop` asks `GET :7011/__stremio-plus` for the server's
+  root + pid and never kills another copy's server.
 - `shell/chrome.m`: dylib injected via `DYLD_INSERT_LIBRARIES` (`open --env`, Stremio allows it) for the transparent
   title bar; the web UI talks to it through the `stremioPlusChrome` WKScriptMessageHandler (`src/mods/macChrome.ts`).
   `apply`/`launch` rebuild it when the source changes. Can't be tested in the headless UI test.
@@ -58,8 +69,10 @@ Spicetify-style mod of the Stremio desktop app (macOS). See README.md for layout
   as variables, not inline strings. Introspection is disabled.
 
 ## Environment gotchas
-- The login agent (`bin/stremio-plus daemon`) re-execs itself when `bin/stremio-plus` changes; an agent started
-  before that (pre task 027) runs stale launch code: `launchctl kickstart -k gui/$(id -u)/com.stremio-plus.agent`.
+- The login agent (`bin/stremio-plus daemon`) reloads itself when `bin/stremio-plus` or `cli/*.js` change (macOS: exits
+  and launchd restarts it; elsewhere it respawns). Log: `addon/data/agent.log`.
+- Windows can't be tested from this Mac (no VM; downloading PowerShell to lint was blocked). Treat Windows/Linux code
+  paths as unverified until the user reports back.
 - pnpm may fail with "attempt to write a readonly database" in sandboxed shells; set XDG_DATA_HOME,
   XDG_CACHE_HOME, XDG_STATE_HOME, XDG_CONFIG_HOME to a writable temp dir before `pnpm install`.
 - The web build's TS target doesn't downlevel iterators: `[...map.entries()]` / `[...set]` silently become `[]`.
